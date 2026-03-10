@@ -1,17 +1,19 @@
-# hello_world
+# SmartDB
 
-A new Flutter project.
+SmartDB is a project that simplifies database management by allowing users to input data in multiple formats such as text, images, documents, spreadsheets, and voice commands. The system processes this input and organizes it into a structured database automatically.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+* Accepts multiple input formats (Text, Image, PDF, Spreadsheet, Voice)
+* Converts unstructured data into structured database entries
+* Allows users to query the database using natural language
+* Reduces manual effort required for database management
 
-A few resources to get you started if this is your first Flutter project:
+## Objective
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+The objective of this project is to make database systems easier to use for people without technical knowledge by enabling automated data extraction and simplified interaction with stored data.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Author
+
+Aditya Katare
+
