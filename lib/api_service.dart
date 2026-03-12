@@ -1,9 +1,8 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  // Change this if your backend URL changes
   static const String baseUrl = 'http://127.0.0.1:8000';
 
   // ── Health check ──────────────────────────
@@ -16,8 +15,9 @@ class ApiService {
     }
   }
 
-  // ── Send image → get extracted text back ──
-  static Future<Map<String, dynamic>> extractFromImage(File imageFile) async {
+  // ── Send image bytes → get extracted text back (web compatible) ──
+  static Future<Map<String, dynamic>> extractFromImageBytes(
+      Uint8List imageBytes, String filename) async {
     try {
       final request = http.MultipartRequest(
         'POST',
@@ -25,7 +25,11 @@ class ApiService {
       );
 
       request.files.add(
-        await http.MultipartFile.fromPath('file', imageFile.path),
+        http.MultipartFile.fromBytes(
+          'file',
+          imageBytes,
+          filename: filename,
+        ),
       );
 
       final response = await request.send();

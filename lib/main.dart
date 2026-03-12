@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -516,7 +517,7 @@ class _BottomBar extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// SCREEN: UPLOAD (now with image picker!)
+// SCREEN: UPLOAD
 // ─────────────────────────────────────────────
 class UploadScreen extends StatefulWidget {
   final DbState db;
@@ -531,29 +532,33 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _loading = false;
   String _extractedText = '';
   String _status = '';
-  File? _pickedImage;
+  Uint8List? _imageBytes;
 
-  // Called when user taps Image card
   Future<void> _pickImage() async {
     final source = await _showSourceDialog();
     if (source == null) return;
 
-    final picked = await _picker.pickImage(source: source, imageQuality: 85);
+    final picked = await _picker.pickImage(
+        source: source, imageQuality: 85);
     if (picked == null) return;
 
+    final bytes = await picked.readAsBytes();
+
     setState(() {
-      _pickedImage = File(picked.path);
+      _imageBytes = bytes;
       _loading = true;
       _status = 'Extracting text…';
       _extractedText = '';
     });
 
-    final result = await ApiService.extractFromImage(File(picked.path));
+    final result =
+        await ApiService.extractFromImageBytes(bytes, picked.name);
 
     setState(() {
       _loading = false;
       if (result['success'] == true) {
-        _extractedText = result['extracted_text'] ?? 'No text found';
+        _extractedText =
+            result['extracted_text'] ?? 'No text found';
         _status = 'Extraction complete';
       } else {
         _status = 'Error: ${result['error']}';
@@ -562,13 +567,13 @@ class _UploadScreenState extends State<UploadScreen> {
     });
   }
 
-  // Ask user: camera or gallery?
   Future<ImageSource?> _showSourceDialog() async {
     return showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: T.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(T.r3)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(T.r3)),
       ),
       builder: (_) => Padding(
         padding: const EdgeInsets.all(20),
@@ -590,13 +595,15 @@ class _UploadScreenState extends State<UploadScreen> {
           _SourceOption(
             icon: Icons.photo_library_outlined,
             label: 'Choose from Gallery',
-            onTap: () => Navigator.pop(context, ImageSource.gallery),
+            onTap: () =>
+                Navigator.pop(context, ImageSource.gallery),
           ),
           const SizedBox(height: 8),
           _SourceOption(
             icon: Icons.camera_alt_outlined,
             label: 'Take a Photo',
-            onTap: () => Navigator.pop(context, ImageSource.camera),
+            onTap: () =>
+                Navigator.pop(context, ImageSource.camera),
           ),
           const SizedBox(height: 8),
         ]),
@@ -624,14 +631,12 @@ class _UploadScreenState extends State<UploadScreen> {
               mainAxisSpacing: 10,
               childAspectRatio: 1.3,
               children: [
-                // ✅ Image card — WIRED UP
                 _InputTile(
                     icon: Icons.image_outlined,
                     label: 'Image / Photo',
                     sub: 'JPG, PNG, handwritten',
                     color: const Color(0xFF2563EB),
                     onTap: _pickImage),
-                // Others coming soon
                 const _InputTile(
                     icon: Icons.mic_none_rounded,
                     label: 'Voice',
@@ -659,9 +664,9 @@ class _UploadScreenState extends State<UploadScreen> {
                     color: Color(0xFF0891B2)),
               ],
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 16),
 
-            // ── Loading indicator ──
+            // Loading indicator
             if (_loading)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -684,21 +689,24 @@ class _UploadScreenState extends State<UploadScreen> {
                 ]),
               ),
 
-            // ── Picked image preview ──
-            if (_pickedImage != null && !_loading) ...[
+            // Image preview — web safe using Image.memory
+            if (_imageBytes != null && !_loading) ...[
+              const SizedBox(height: 16),
               const _SectionLabel('Selected Image'),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(T.r2),
-                child: Image.file(_pickedImage!,
-                    width: double.infinity,
-                    height: 180,
-                    fit: BoxFit.cover),
+                child: Image.memory(
+                  _imageBytes!,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(height: 16),
             ],
 
-            // ── Extracted text result ──
+            // Extracted text result
             if (_extractedText.isNotEmpty) ...[
               Row(children: [
                 const _SectionLabel('Extracted Text'),
@@ -731,14 +739,13 @@ class _UploadScreenState extends State<UploadScreen> {
                         height: 1.6)),
               ),
               const SizedBox(height: 12),
-              _Btn(
-                label: 'Save to Database →',
-                onTap: () {},
-              ),
+              _Btn(label: 'Save to Database →', onTap: () {}),
             ],
 
-            // ── Empty state ──
-            if (!_loading && _extractedText.isEmpty && _pickedImage == null) ...[
+            // Empty state
+            if (!_loading &&
+                _extractedText.isEmpty &&
+                _imageBytes == null) ...[
               const _SectionLabel('Recent Activity'),
               const SizedBox(height: 10),
               const _EmptyCard(
@@ -752,7 +759,6 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 }
 
-// Source picker option row
 class _SourceOption extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -900,7 +906,8 @@ class _QueryScreenState extends State<QueryScreen> {
                       border: Border.all(color: T.border),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
+                            color: Colors.black
+                                .withValues(alpha: 0.04),
                             blurRadius: 8,
                             offset: const Offset(0, 2))
                       ]),
@@ -921,14 +928,15 @@ class _QueryScreenState extends State<QueryScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                      padding:
+                          const EdgeInsets.fromLTRB(12, 8, 12, 8),
                       decoration: const BoxDecoration(
                           border: Border(
                               top: BorderSide(color: T.border))),
                       child: Row(children: [
                         GestureDetector(
-                          onTap: () =>
-                              setState(() => _showSql = !_showSql),
+                          onTap: () => setState(
+                              () => _showSql = !_showSql),
                           child: Row(children: [
                             Icon(
                               _showSql
@@ -941,8 +949,9 @@ class _QueryScreenState extends State<QueryScreen> {
                             Text('Show SQL',
                                 style: TextStyle(
                                     fontSize: T.fontSm,
-                                    color:
-                                        _showSql ? T.accent : T.t2)),
+                                    color: _showSql
+                                        ? T.accent
+                                        : T.t2)),
                           ]),
                         ),
                         const Spacer(),
@@ -1093,8 +1102,8 @@ class _SettingsState extends State<SettingsScreen> {
                     const SizedBox(height: 2),
                     const Text(
                         'Verify fields below this confidence level',
-                        style:
-                            TextStyle(color: T.t3, fontSize: T.fontSm)),
+                        style: TextStyle(
+                            color: T.t3, fontSize: T.fontSm)),
                     SliderTheme(
                       data: SliderTheme.of(ctx).copyWith(
                         activeTrackColor: T.accent,
@@ -1243,8 +1252,7 @@ class _InputTile extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(T.r2),
-                border: Border.all(
-                    color: onTap != null ? T.border : T.border)),
+                border: Border.all(color: T.border)),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
