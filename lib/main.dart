@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'api_service.dart';
 
 void main() {
   runApp(const DataBridgeApp());
@@ -58,7 +61,7 @@ class T {
 }
 
 // ─────────────────────────────────────────────
-// RESPONSIVE WRAPPER — fixes web sizing
+// RESPONSIVE WRAPPER
 // ─────────────────────────────────────────────
 class Responsive extends StatelessWidget {
   final Widget child;
@@ -79,7 +82,6 @@ class Responsive extends StatelessWidget {
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.10),
                   blurRadius: 48,
-                  offset: const Offset(0, 0),
                 ),
               ],
             ),
@@ -335,8 +337,8 @@ class _ConnectDialogState extends State<_ConnectDialog> {
               const Spacer(),
               GestureDetector(
                 onTap: () => Navigator.pop(ctx),
-                child:
-                    const Icon(Icons.close_rounded, color: T.t3, size: 18),
+                child: const Icon(Icons.close_rounded,
+                    color: T.t3, size: 18),
               ),
             ]),
             const SizedBox(height: 18),
@@ -361,8 +363,8 @@ class _ConnectDialogState extends State<_ConnectDialog> {
                     fontFamily: 'monospace'),
                 decoration: InputDecoration(
                   hintText: 'mysql://user:pass@host:3306/db',
-                  hintStyle:
-                      const TextStyle(color: T.t4, fontSize: T.fontBase),
+                  hintStyle: const TextStyle(
+                      color: T.t4, fontSize: T.fontBase),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 12),
@@ -379,7 +381,8 @@ class _ConnectDialogState extends State<_ConnectDialog> {
               ),
             ),
             const SizedBox(height: 5),
-            const Text('mysql://username:password@hostname:3306/dbname',
+            const Text(
+                'mysql://username:password@hostname:3306/dbname',
                 style: TextStyle(color: T.t3, fontSize: 10)),
             const SizedBox(height: 16),
             if (widget.db.isConnected)
@@ -498,8 +501,9 @@ class _BottomBar extends StatelessWidget {
                   Text(_items[i].label,
                       style: TextStyle(
                           fontSize: 10,
-                          fontWeight:
-                              sel ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: sel
+                              ? FontWeight.w700
+                              : FontWeight.w400,
                           color: sel ? T.accent : T.t3)),
                 ],
               ),
@@ -512,74 +516,278 @@ class _BottomBar extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// SCREEN: UPLOAD
+// SCREEN: UPLOAD (now with image picker!)
 // ─────────────────────────────────────────────
-class UploadScreen extends StatelessWidget {
+class UploadScreen extends StatefulWidget {
   final DbState db;
   const UploadScreen({super.key, required this.db});
+
+  @override
+  State<UploadScreen> createState() => _UploadScreenState();
+}
+
+class _UploadScreenState extends State<UploadScreen> {
+  final _picker = ImagePicker();
+  bool _loading = false;
+  String _extractedText = '';
+  String _status = '';
+  File? _pickedImage;
+
+  // Called when user taps Image card
+  Future<void> _pickImage() async {
+    final source = await _showSourceDialog();
+    if (source == null) return;
+
+    final picked = await _picker.pickImage(source: source, imageQuality: 85);
+    if (picked == null) return;
+
+    setState(() {
+      _pickedImage = File(picked.path);
+      _loading = true;
+      _status = 'Extracting text…';
+      _extractedText = '';
+    });
+
+    final result = await ApiService.extractFromImage(File(picked.path));
+
+    setState(() {
+      _loading = false;
+      if (result['success'] == true) {
+        _extractedText = result['extracted_text'] ?? 'No text found';
+        _status = 'Extraction complete';
+      } else {
+        _status = 'Error: ${result['error']}';
+        _extractedText = '';
+      }
+    });
+  }
+
+  // Ask user: camera or gallery?
+  Future<ImageSource?> _showSourceDialog() async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: T.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(T.r3)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+                color: T.border,
+                borderRadius: BorderRadius.circular(T.r4)),
+          ),
+          const SizedBox(height: 16),
+          const Text('Select Image Source',
+              style: TextStyle(
+                  color: T.t1,
+                  fontSize: T.fontLg,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 16),
+          _SourceOption(
+            icon: Icons.photo_library_outlined,
+            label: 'Choose from Gallery',
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          const SizedBox(height: 8),
+          _SourceOption(
+            icon: Icons.camera_alt_outlined,
+            label: 'Take a Photo',
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext ctx) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      child:
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const _PageHeader(
-            title: 'Import Data',
-            subtitle: 'Choose a source to extract & store',
-            badge: null),
-        const SizedBox(height: 18),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.3,
-          children: const [
-            _InputTile(
-                icon: Icons.image_outlined,
-                label: 'Image / Photo',
-                sub: 'JPG, PNG, handwritten',
-                color: Color(0xFF2563EB)),
-            _InputTile(
-                icon: Icons.mic_none_rounded,
-                label: 'Voice',
-                sub: 'Speak to enter data',
-                color: Color(0xFF7C3AED)),
-            _InputTile(
-                icon: Icons.description_outlined,
-                label: 'Document',
-                sub: 'PDF, Word, text',
-                color: Color(0xFFD97706)),
-            _InputTile(
-                icon: Icons.grid_on_rounded,
-                label: 'Spreadsheet',
-                sub: 'CSV, Excel files',
-                color: Color(0xFF16A34A)),
-            _InputTile(
-                icon: Icons.edit_note_rounded,
-                label: 'Manual Entry',
-                sub: 'Type data directly',
-                color: Color(0xFFDB2777)),
-            _InputTile(
-                icon: Icons.link_rounded,
-                label: 'Paste URL',
-                sub: 'Extract from web',
-                color: Color(0xFF0891B2)),
-          ],
-        ),
-        const SizedBox(height: 22),
-        const _SectionLabel('Recent Activity'),
-        const SizedBox(height: 10),
-        const _EmptyCard(
-          icon: Icons.inbox_outlined,
-          title: 'No imports yet',
-          sub: 'Upload something to get started',
-        ),
-      ]),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _PageHeader(
+                title: 'Import Data',
+                subtitle: 'Choose a source to extract & store',
+                badge: null),
+            const SizedBox(height: 18),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.3,
+              children: [
+                // ✅ Image card — WIRED UP
+                _InputTile(
+                    icon: Icons.image_outlined,
+                    label: 'Image / Photo',
+                    sub: 'JPG, PNG, handwritten',
+                    color: const Color(0xFF2563EB),
+                    onTap: _pickImage),
+                // Others coming soon
+                const _InputTile(
+                    icon: Icons.mic_none_rounded,
+                    label: 'Voice',
+                    sub: 'Coming Week 6',
+                    color: Color(0xFF7C3AED)),
+                const _InputTile(
+                    icon: Icons.description_outlined,
+                    label: 'Document',
+                    sub: 'Coming Week 6',
+                    color: Color(0xFFD97706)),
+                const _InputTile(
+                    icon: Icons.grid_on_rounded,
+                    label: 'Spreadsheet',
+                    sub: 'Coming Week 6',
+                    color: Color(0xFF16A34A)),
+                const _InputTile(
+                    icon: Icons.edit_note_rounded,
+                    label: 'Manual Entry',
+                    sub: 'Coming soon',
+                    color: Color(0xFFDB2777)),
+                const _InputTile(
+                    icon: Icons.link_rounded,
+                    label: 'Paste URL',
+                    sub: 'Coming soon',
+                    color: Color(0xFF0891B2)),
+              ],
+            ),
+            const SizedBox(height: 22),
+
+            // ── Loading indicator ──
+            if (_loading)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: T.accentLight,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.accentMid)),
+                child: Row(children: [
+                  const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: T.accent)),
+                  const SizedBox(width: 12),
+                  Text(_status,
+                      style: const TextStyle(
+                          color: T.accent,
+                          fontSize: T.fontBase,
+                          fontWeight: FontWeight.w600)),
+                ]),
+              ),
+
+            // ── Picked image preview ──
+            if (_pickedImage != null && !_loading) ...[
+              const _SectionLabel('Selected Image'),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(T.r2),
+                child: Image.file(_pickedImage!,
+                    width: double.infinity,
+                    height: 180,
+                    fit: BoxFit.cover),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ── Extracted text result ──
+            if (_extractedText.isNotEmpty) ...[
+              Row(children: [
+                const _SectionLabel('Extracted Text'),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: T.successLight,
+                      borderRadius: BorderRadius.circular(T.r4)),
+                  child: const Text('✓ Done',
+                      style: TextStyle(
+                          color: T.success,
+                          fontSize: T.fontSm,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                    color: T.white,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: Text(_extractedText,
+                    style: const TextStyle(
+                        color: T.t1,
+                        fontSize: T.fontBase,
+                        height: 1.6)),
+              ),
+              const SizedBox(height: 12),
+              _Btn(
+                label: 'Save to Database →',
+                onTap: () {},
+              ),
+            ],
+
+            // ── Empty state ──
+            if (!_loading && _extractedText.isEmpty && _pickedImage == null) ...[
+              const _SectionLabel('Recent Activity'),
+              const SizedBox(height: 10),
+              const _EmptyCard(
+                icon: Icons.inbox_outlined,
+                title: 'No imports yet',
+                sub: 'Tap Image / Photo to get started',
+              ),
+            ],
+          ]),
     );
   }
+}
+
+// Source picker option row
+class _SourceOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _SourceOption(
+      {required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext ctx) => Material(
+        color: T.bg,
+        borderRadius: BorderRadius.circular(T.r2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(T.r2),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(T.r2),
+                border: Border.all(color: T.border)),
+            child: Row(children: [
+              Icon(icon, color: T.accent, size: 20),
+              const SizedBox(width: 12),
+              Text(label,
+                  style: const TextStyle(
+                      color: T.t1,
+                      fontSize: T.fontMd,
+                      fontWeight: FontWeight.w600)),
+              const Spacer(),
+              const Icon(Icons.chevron_right_rounded,
+                  color: T.t3, size: 18),
+            ]),
+          ),
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────
@@ -706,8 +914,8 @@ class _QueryScreenState extends State<QueryScreen> {
                       decoration: const InputDecoration(
                         hintText:
                             'e.g. "Show all students with marks above 80"',
-                        hintStyle:
-                            TextStyle(color: T.t4, fontSize: T.fontBase),
+                        hintStyle: TextStyle(
+                            color: T.t4, fontSize: T.fontBase),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(14),
                       ),
@@ -733,7 +941,8 @@ class _QueryScreenState extends State<QueryScreen> {
                             Text('Show SQL',
                                 style: TextStyle(
                                     fontSize: T.fontSm,
-                                    color: _showSql ? T.accent : T.t2)),
+                                    color:
+                                        _showSql ? T.accent : T.t2)),
                           ]),
                         ),
                         const Spacer(),
@@ -794,147 +1003,153 @@ class _SettingsState extends State<SettingsScreen> {
   Widget build(BuildContext ctx) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      child:
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const _PageHeader(
-            title: 'Settings',
-            subtitle: 'APIs & preferences',
-            badge: null),
-        const SizedBox(height: 20),
-        const _SectionLabel('API Keys'),
-        const SizedBox(height: 8),
-        _KeyTile(
-            icon: Icons.auto_awesome_rounded,
-            iconBg: T.accentLight,
-            iconColor: T.accent,
-            title: 'Claude API Key',
-            sub: 'Schema generation & NL→SQL'),
-        _KeyTile(
-            icon: Icons.image_search_rounded,
-            iconBg: T.warningLight,
-            iconColor: T.warning,
-            title: 'Google Vision API Key',
-            sub: 'Image OCR extraction'),
-        _KeyTile(
-            icon: Icons.mic_rounded,
-            iconBg: const Color(0xFFF5F3FF),
-            iconColor: const Color(0xFF7C3AED),
-            title: 'Whisper API Key',
-            sub: 'Voice transcription'),
-        const SizedBox(height: 20),
-        const _SectionLabel('Extraction'),
-        const SizedBox(height: 8),
-        _ToggleRow(
-            icon: Icons.schema_outlined,
-            iconBg: T.successLight,
-            iconColor: T.success,
-            title: 'Auto Schema Generation',
-            sub: 'Create tables from extracted data',
-            value: _autoSchema,
-            onChanged: (v) => setState(() => _autoSchema = v)),
-        _ToggleRow(
-            icon: Icons.verified_outlined,
-            iconBg: T.accentLight,
-            iconColor: T.accent,
-            title: 'Intelligent Validation',
-            sub: 'Flag anomalies and invalid values',
-            value: _validate,
-            onChanged: (v) => setState(() => _validate = v)),
-        _ToggleRow(
-            icon: Icons.percent_rounded,
-            iconBg: T.warningLight,
-            iconColor: T.warning,
-            title: 'Confidence Scores',
-            sub: 'Show reliability of each field',
-            value: _confidence,
-            onChanged: (v) => setState(() => _confidence = v)),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-              color: T.white,
-              borderRadius: BorderRadius.circular(T.r2),
-              border: Border.all(color: T.border)),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  const Text('Confidence Threshold',
-                      style: TextStyle(
-                          color: T.t1,
-                          fontSize: T.fontMd,
-                          fontWeight: FontWeight.w600)),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                        color: T.accentLight,
-                        borderRadius: BorderRadius.circular(T.r4)),
-                    child: Text('${(_threshold * 100).round()}%',
-                        style: const TextStyle(
-                            color: T.accent,
-                            fontSize: T.fontSm,
-                            fontWeight: FontWeight.w700)),
-                  ),
-                ]),
-                const SizedBox(height: 2),
-                const Text(
-                    'Verify fields below this confidence level',
-                    style: TextStyle(color: T.t3, fontSize: T.fontSm)),
-                SliderTheme(
-                  data: SliderTheme.of(ctx).copyWith(
-                    activeTrackColor: T.accent,
-                    inactiveTrackColor: T.border,
-                    thumbColor: T.accent,
-                    overlayColor: T.accentLight,
-                    trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 7),
-                  ),
-                  child: Slider(
-                    value: _threshold,
-                    min: 0.5,
-                    max: 1.0,
-                    divisions: 10,
-                    onChanged: (v) => setState(() => _threshold = v),
-                  ),
-                ),
-              ]),
-        ),
-        const SizedBox(height: 20),
-        const _SectionLabel('About'),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-              color: T.white,
-              borderRadius: BorderRadius.circular(T.r2),
-              border: Border.all(color: T.border)),
-          child: Row(children: [
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _PageHeader(
+                title: 'Settings',
+                subtitle: 'APIs & preferences',
+                badge: null),
+            const SizedBox(height: 20),
+            const _SectionLabel('API Keys'),
+            const SizedBox(height: 8),
+            _KeyTile(
+                icon: Icons.auto_awesome_rounded,
+                iconBg: T.accentLight,
+                iconColor: T.accent,
+                title: 'Claude API Key',
+                sub: 'Schema generation & NL→SQL'),
+            _KeyTile(
+                icon: Icons.image_search_rounded,
+                iconBg: T.warningLight,
+                iconColor: T.warning,
+                title: 'Google Vision API Key',
+                sub: 'Image OCR extraction'),
+            _KeyTile(
+                icon: Icons.mic_rounded,
+                iconBg: const Color(0xFFF5F3FF),
+                iconColor: const Color(0xFF7C3AED),
+                title: 'Whisper API Key',
+                sub: 'Voice transcription'),
+            const SizedBox(height: 20),
+            const _SectionLabel('Extraction'),
+            const SizedBox(height: 8),
+            _ToggleRow(
+                icon: Icons.schema_outlined,
+                iconBg: T.successLight,
+                iconColor: T.success,
+                title: 'Auto Schema Generation',
+                sub: 'Create tables from extracted data',
+                value: _autoSchema,
+                onChanged: (v) => setState(() => _autoSchema = v)),
+            _ToggleRow(
+                icon: Icons.verified_outlined,
+                iconBg: T.accentLight,
+                iconColor: T.accent,
+                title: 'Intelligent Validation',
+                sub: 'Flag anomalies and invalid values',
+                value: _validate,
+                onChanged: (v) => setState(() => _validate = v)),
+            _ToggleRow(
+                icon: Icons.percent_rounded,
+                iconBg: T.warningLight,
+                iconColor: T.warning,
+                title: 'Confidence Scores',
+                sub: 'Show reliability of each field',
+                value: _confidence,
+                onChanged: (v) => setState(() => _confidence = v)),
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                  color: T.accentLight,
-                  borderRadius: BorderRadius.circular(T.r1)),
-              child: const Icon(Icons.hub_rounded,
-                  color: T.accent, size: 16),
+                  color: T.white,
+                  borderRadius: BorderRadius.circular(T.r2),
+                  border: Border.all(color: T.border)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      const Text('Confidence Threshold',
+                          style: TextStyle(
+                              color: T.t1,
+                              fontSize: T.fontMd,
+                              fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: T.accentLight,
+                            borderRadius:
+                                BorderRadius.circular(T.r4)),
+                        child: Text(
+                            '${(_threshold * 100).round()}%',
+                            style: const TextStyle(
+                                color: T.accent,
+                                fontSize: T.fontSm,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    ]),
+                    const SizedBox(height: 2),
+                    const Text(
+                        'Verify fields below this confidence level',
+                        style:
+                            TextStyle(color: T.t3, fontSize: T.fontSm)),
+                    SliderTheme(
+                      data: SliderTheme.of(ctx).copyWith(
+                        activeTrackColor: T.accent,
+                        inactiveTrackColor: T.border,
+                        thumbColor: T.accent,
+                        overlayColor: T.accentLight,
+                        trackHeight: 3,
+                        thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 7),
+                      ),
+                      child: Slider(
+                        value: _threshold,
+                        min: 0.5,
+                        max: 1.0,
+                        divisions: 10,
+                        onChanged: (v) =>
+                            setState(() => _threshold = v),
+                      ),
+                    ),
+                  ]),
             ),
-            const SizedBox(width: 12),
-            const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('DataBridge v1.0.0',
-                      style: TextStyle(
-                          color: T.t1,
-                          fontSize: T.fontMd,
-                          fontWeight: FontWeight.w600)),
-                  Text('Multimodal Database Management',
-                      style: TextStyle(color: T.t3, fontSize: T.fontSm)),
-                ]),
+            const SizedBox(height: 20),
+            const _SectionLabel('About'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                  color: T.white,
+                  borderRadius: BorderRadius.circular(T.r2),
+                  border: Border.all(color: T.border)),
+              child: Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: T.accentLight,
+                      borderRadius: BorderRadius.circular(T.r1)),
+                  child: const Icon(Icons.hub_rounded,
+                      color: T.accent, size: 16),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('DataBridge v1.0.0',
+                          style: TextStyle(
+                              color: T.t1,
+                              fontSize: T.fontMd,
+                              fontWeight: FontWeight.w600)),
+                      Text('Multimodal Database Management',
+                          style: TextStyle(
+                              color: T.t3, fontSize: T.fontSm)),
+                    ]),
+              ]),
+            ),
           ]),
-        ),
-      ]),
     );
   }
 }
@@ -1009,11 +1224,13 @@ class _InputTile extends StatelessWidget {
   final String label;
   final String sub;
   final Color color;
+  final VoidCallback? onTap;
   const _InputTile(
       {required this.icon,
       required this.label,
       required this.sub,
-      required this.color});
+      required this.color,
+      this.onTap});
 
   @override
   Widget build(BuildContext ctx) => Material(
@@ -1021,12 +1238,13 @@ class _InputTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(T.r2),
         child: InkWell(
           borderRadius: BorderRadius.circular(T.r2),
-          onTap: () {},
+          onTap: onTap ?? () {},
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(T.r2),
-                border: Border.all(color: T.border)),
+                border: Border.all(
+                    color: onTap != null ? T.border : T.border)),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1215,7 +1433,8 @@ class _SuggestionRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(T.r2),
                 border: Border.all(color: T.border)),
             child: Row(children: [
-              const Icon(Icons.north_west_rounded, color: T.t4, size: 13),
+              const Icon(Icons.north_west_rounded,
+                  color: T.t4, size: 13),
               const SizedBox(width: 10),
               Expanded(
                   child: Text(text,
@@ -1341,7 +1560,6 @@ class _ToggleRow extends StatelessWidget {
 // ─────────────────────────────────────────────
 // PRIMITIVE BUTTONS
 // ─────────────────────────────────────────────
-
 class _Btn extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
