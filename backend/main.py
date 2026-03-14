@@ -1,10 +1,13 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import base64
-import httpx
-import os
+import pytesseract
+from PIL import Image
+import io
 
 app = FastAPI()
+
+# Tesseract path for Windows
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Allow Flutter web to call this API
 app.add_middleware(
@@ -13,8 +16,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-GOOGLE_VISION_API_KEY = "YOUR_GOOGLE_VISION_API_KEY"  # replace later
 
 # ── Health check ──────────────────────────────
 @app.get("/health")
@@ -26,36 +27,20 @@ def health():
 @app.post("/extract/image")
 async def extract_image(file: UploadFile = File(...)):
     try:
-        # Read image bytes and encode to base64
+        # Read image bytes
         image_bytes = await file.read()
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        # Call Google Vision API
-        url = f"https://vision.googleapis.com/v1/images:annotate?key={GOOGLE_VISION_API_KEY}"
-        payload = {
-            "requests": [
-                {
-                    "image": {"content": image_b64},
-                    "features": [{"type": "TEXT_DETECTION"}],
-                }
-            ]
-        }
+        # Convert to PIL Image
+        image = Image.open(io.BytesIO(image_bytes))
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload)
-            result = response.json()
-
-        # Extract text from response
-        annotations = result["responses"][0].get("textAnnotations", [])
-        if annotations:
-            extracted_text = annotations[0]["description"]
-        else:
-            extracted_text = ""
+        # Run Tesseract OCR
+        extracted_text = pytesseract.image_to_string(image)
+        extracted_text = extracted_text.strip()
 
         return {
             "success": True,
-            "extracted_text": extracted_text,
-            "source": "google_vision",
+            "extracted_text": extracted_text if extracted_text else "No text found in image",
+            "source": "tesseract",
         }
 
     except Exception as e:
@@ -66,7 +51,6 @@ async def extract_image(file: UploadFile = File(...)):
 @app.post("/schema/generate")
 async def generate_schema(data: dict):
     text = data.get("text", "")
-    # Claude API integration comes in Week 4
     return {
         "success": True,
         "message": "Schema generation coming in Week 4",
@@ -78,7 +62,6 @@ async def generate_schema(data: dict):
 @app.post("/query/nl")
 async def nl_to_sql(data: dict):
     question = data.get("question", "")
-    # Claude API integration comes in Week 5
     return {
         "success": True,
         "message": "NL to SQL coming in Week 5",
