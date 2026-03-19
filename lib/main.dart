@@ -1,68 +1,56 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'api_service.dart';
 
 void main() {
   runApp(const DataBridgeApp());
 }
 
-// ─────────────────────────────────────────────
-// THEME
-// ─────────────────────────────────────────────
 class T {
-  static const bg = Color(0xFFF8F9FB);
+  static const bg = Color(0xFFF5F7FA);
   static const white = Color(0xFFFFFFFF);
-  static const border = Color(0xFFE8ECF0);
-  static const borderDark = Color(0xFFD1D8E0);
-  static const accent = Color(0xFF2563EB);
-  static const accentLight = Color(0xFFEEF3FF);
-  static const accentMid = Color(0xFFDBE8FF);
-  static const success = Color(0xFF16A34A);
-  static const successLight = Color(0xFFECFDF5);
-  static const warning = Color(0xFFD97706);
-  static const warningLight = Color(0xFFFFFBEB);
-  static const danger = Color(0xFFDC2626);
-  static const dangerLight = Color(0xFFFEF2F2);
-  static const t1 = Color(0xFF0F172A);
-  static const t2 = Color(0xFF475569);
-  static const t3 = Color(0xFF94A3B8);
-  static const t4 = Color(0xFFCBD5E1);
+  static const border = Color(0xFFEAEEF2);
+  static const accent = Color(0xFF3B6FE8);
+  static const accentLight = Color(0xFFEDF2FF);
+  static const accentMid = Color(0xFFD0DCFF);
+  static const success = Color(0xFF12A05C);
+  static const successLight = Color(0xFFEAFAF1);
+  static const warning = Color(0xFFE07B10);
+  static const warningLight = Color(0xFFFFF4E5);
+  static const danger = Color(0xFFD93025);
+  static const dangerLight = Color(0xFFFFF0EF);
+  static const t1 = Color(0xFF111827);
+  static const t2 = Color(0xFF4B5563);
+  static const t3 = Color(0xFF9CA3AF);
+  static const t4 = Color(0xFFD1D5DB);
 
   static const fontSm = 11.0;
   static const fontBase = 13.0;
   static const fontMd = 14.0;
   static const fontLg = 16.0;
   static const fontXl = 20.0;
-  static const font2xl = 24.0;
-
-  static const r1 = 6.0;
-  static const r2 = 10.0;
-  static const r3 = 14.0;
-  static const r4 = 20.0;
+  static const font2xl = 26.0;
+  static const r1 = 8.0;
+  static const r2 = 12.0;
+  static const r3 = 16.0;
+  static const r4 = 24.0;
 
   static ThemeData theme() => ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: bg,
-        colorScheme: const ColorScheme.light(
-          primary: accent,
-          surface: white,
-        ),
+        colorScheme: const ColorScheme.light(primary: accent, surface: white),
         appBarTheme: const AppBarTheme(
-          backgroundColor: white,
-          elevation: 0,
-          systemOverlayStyle: SystemUiOverlayStyle.dark,
-        ),
+            backgroundColor: white,
+            elevation: 0,
+            systemOverlayStyle: SystemUiOverlayStyle.dark),
         textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: t1, fontSize: fontBase),
-        ),
+            bodyMedium: TextStyle(color: t1, fontSize: fontBase)),
       );
 }
 
-// ─────────────────────────────────────────────
-// RESPONSIVE WRAPPER
-// ─────────────────────────────────────────────
 class Responsive extends StatelessWidget {
   final Widget child;
   const Responsive({super.key, required this.child});
@@ -72,17 +60,17 @@ class Responsive extends StatelessWidget {
     final w = MediaQuery.of(context).size.width;
     if (w > 500) {
       return Container(
-        color: const Color(0xFFE8EDF3),
+        color: const Color(0xFFDDE3ED),
         child: Center(
           child: Container(
-            width: 430,
+            width: 440,
             decoration: BoxDecoration(
               color: T.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.10),
-                  blurRadius: 48,
-                ),
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 60,
+                    offset: const Offset(0, 4))
               ],
             ),
             child: ClipRect(child: child),
@@ -94,9 +82,6 @@ class Responsive extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-// DB STATE
-// ─────────────────────────────────────────────
 class DbState extends ChangeNotifier {
   bool isConnected = false;
   String dbUrl = '';
@@ -127,9 +112,6 @@ class DbState extends ChangeNotifier {
   }
 }
 
-// ─────────────────────────────────────────────
-// ROOT APP
-// ─────────────────────────────────────────────
 class DataBridgeApp extends StatelessWidget {
   const DataBridgeApp({super.key});
 
@@ -145,9 +127,6 @@ class DataBridgeApp extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-// MAIN SHELL
-// ─────────────────────────────────────────────
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -171,24 +150,17 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       backgroundColor: T.bg,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: _AppBar(db: _db),
-      ),
+          preferredSize: const Size.fromHeight(58), child: _AppBar(db: _db)),
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 200),
         child: KeyedSubtree(key: ValueKey(_idx), child: screens[_idx]),
       ),
-      bottomNavigationBar: _BottomBar(
-        idx: _idx,
-        onTap: (i) => setState(() => _idx = i),
-      ),
+      bottomNavigationBar:
+          _BottomBar(idx: _idx, onTap: (i) => setState(() => _idx = i)),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// APP BAR
-// ─────────────────────────────────────────────
 class _AppBar extends StatelessWidget {
   final DbState db;
   const _AppBar({required this.db});
@@ -199,94 +171,78 @@ class _AppBar extends StatelessWidget {
       animation: db,
       builder: (ctx, _) => Container(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(ctx).padding.top,
-          left: 16,
-          right: 12,
-        ),
+            top: MediaQuery.of(ctx).padding.top, left: 18, right: 14),
         decoration: const BoxDecoration(
-          color: T.white,
-          border: Border(bottom: BorderSide(color: T.border)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: T.accent,
-                borderRadius: BorderRadius.circular(T.r1),
-              ),
-              child: const Icon(Icons.hub_rounded,
-                  color: Colors.white, size: 16),
-            ),
-            const SizedBox(width: 9),
-            const Text('DataBridge',
-                style: TextStyle(
-                    color: T.t1,
-                    fontSize: T.fontLg,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3)),
-            const Spacer(),
-            TextButton(
-              onPressed: () => showDialog(
-                  context: ctx,
-                  builder: (_) => _ConnectDialog(db: db)),
-              style: TextButton.styleFrom(
-                backgroundColor:
-                    db.isConnected ? T.successLight : T.accentLight,
-                foregroundColor:
-                    db.isConnected ? T.success : T.accent,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(T.r4),
-                  side: BorderSide(
-                    color: db.isConnected
-                        ? T.success.withValues(alpha: 0.3)
-                        : T.accent.withValues(alpha: 0.25),
-                  ),
+            color: T.white,
+            border: Border(bottom: BorderSide(color: T.border))),
+        child: Row(children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B6FE8), Color(0xFF6B47DC)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                borderRadius: BorderRadius.circular(T.r1)),
+            child:
+                const Icon(Icons.hub_rounded, color: Colors.white, size: 17),
+          ),
+          const SizedBox(width: 10),
+          const Text('DataBridge',
+              style: TextStyle(
+                  color: T.t1,
+                  fontSize: T.fontLg,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5)),
+          const Spacer(),
+          GestureDetector(
+            onTap: () => showDialog(
+                context: ctx, builder: (_) => _ConnectDialog(db: db)),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: db.isConnected ? T.successLight : T.accentLight,
+                borderRadius: BorderRadius.circular(T.r4),
+                border: Border.all(
+                    color: db.isConnected
+                        ? T.success.withValues(alpha: 0.35)
+                        : T.accent.withValues(alpha: 0.3)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: db.isConnected ? T.success : T.accent,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    db.isConnected ? db.dbName : 'Connect DB',
+                      color: db.isConnected ? T.success : T.accent),
+                ),
+                const SizedBox(width: 7),
+                Text(db.isConnected ? db.dbName : 'Connect DB',
                     style: TextStyle(
                         fontSize: T.fontSm,
-                        fontWeight: FontWeight.w600,
-                        color: db.isConnected ? T.success : T.accent),
-                  ),
-                  if (db.isConnected) ...[
-                    const SizedBox(width: 2),
-                    Icon(Icons.expand_more_rounded,
-                        size: 14,
-                        color: db.isConnected ? T.success : T.accent),
-                  ],
+                        fontWeight: FontWeight.w700,
+                        color: db.isConnected ? T.success : T.accent,
+                        letterSpacing: 0.2)),
+                if (db.isConnected) ...[
+                  const SizedBox(width: 3),
+                  Icon(Icons.expand_more_rounded,
+                      size: 14,
+                      color: db.isConnected ? T.success : T.accent),
                 ],
-              ),
+              ]),
             ),
-          ],
-        ),
+          ),
+        ]),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// CONNECT DIALOG
-// ─────────────────────────────────────────────
 class _ConnectDialog extends StatefulWidget {
   final DbState db;
   const _ConnectDialog({required this.db});
@@ -314,123 +270,115 @@ class _ConnectDialogState extends State<_ConnectDialog> {
           borderRadius: BorderRadius.circular(T.r3),
           side: const BorderSide(color: T.border)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                    color: T.accentLight,
-                    borderRadius: BorderRadius.circular(T.r1)),
-                child: const Icon(Icons.storage_rounded,
-                    color: T.accent, size: 16),
-              ),
-              const SizedBox(width: 10),
-              const Text('Connect Database',
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: T.accentLight,
+                        borderRadius: BorderRadius.circular(T.r1)),
+                    child: const Icon(Icons.storage_rounded,
+                        color: T.accent, size: 17)),
+                const SizedBox(width: 11),
+                const Text('Connect Database',
+                    style: TextStyle(
+                        color: T.t1,
+                        fontSize: T.fontLg,
+                        fontWeight: FontWeight.w700)),
+                const Spacer(),
+                GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: const Icon(Icons.close_rounded,
+                        color: T.t3, size: 19)),
+              ]),
+              const SizedBox(height: 20),
+              const Text('CONNECTION URL',
                   style: TextStyle(
-                      color: T.t1,
-                      fontSize: T.fontLg,
-                      fontWeight: FontWeight.w700)),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => Navigator.pop(ctx),
-                child: const Icon(Icons.close_rounded,
-                    color: T.t3, size: 18),
-              ),
-            ]),
-            const SizedBox(height: 18),
-            const Text('CONNECTION URL',
-                style: TextStyle(
-                    color: T.t3,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2)),
-            const SizedBox(height: 6),
-            Container(
-              decoration: BoxDecoration(
-                  color: T.bg,
-                  borderRadius: BorderRadius.circular(T.r2),
-                  border: Border.all(color: T.border)),
-              child: TextField(
-                controller: _ctrl,
-                obscureText: _hide,
-                style: const TextStyle(
-                    color: T.t1,
-                    fontSize: T.fontBase,
-                    fontFamily: 'monospace'),
-                decoration: InputDecoration(
-                  hintText: 'mysql://user:pass@host:3306/db',
-                  hintStyle: const TextStyle(
-                      color: T.t4, fontSize: T.fontBase),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 12),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                        _hide
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: T.t3,
-                        size: 16),
-                    onPressed: () => setState(() => _hide = !_hide),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-                'mysql://username:password@hostname:3306/dbname',
-                style: TextStyle(color: T.t3, fontSize: 10)),
-            const SizedBox(height: 16),
-            if (widget.db.isConnected)
+                      color: T.t3,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.3)),
+              const SizedBox(height: 7),
               Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: T.successLight,
-                    borderRadius: BorderRadius.circular(T.r1),
-                    border: Border.all(
-                        color: T.success.withValues(alpha: 0.2))),
-                child: Row(children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: T.success, size: 14),
-                  const SizedBox(width: 6),
-                  Text('Connected to ${widget.db.dbName}',
-                      style: const TextStyle(
-                          color: T.success,
-                          fontSize: T.fontSm,
-                          fontWeight: FontWeight.w600)),
-                ]),
-              ),
-            Row(children: [
-              if (widget.db.isConnected) ...[
-                Expanded(
-                  child: _Btn(
-                    label: 'Disconnect',
-                    onTap: () {
-                      widget.db.disconnect();
-                      Navigator.pop(ctx);
-                    },
-                    outline: true,
-                    danger: true,
+                    color: T.bg,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: TextField(
+                  controller: _ctrl,
+                  obscureText: _hide,
+                  style: const TextStyle(
+                      color: T.t1,
+                      fontSize: T.fontBase,
+                      fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    hintText: 'mysql://user:pass@host:3306/db',
+                    hintStyle:
+                        const TextStyle(color: T.t4, fontSize: T.fontBase),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 13),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          _hide
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: T.t3,
+                          size: 16),
+                      onPressed: () => setState(() => _hide = !_hide),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                flex: 2,
-                child: _Btn(
-                  label: _loading ? 'Connecting…' : 'Connect',
-                  onTap: _loading ? null : _connect,
-                ),
               ),
+              const SizedBox(height: 6),
+              const Text('mysql://username:password@hostname:3306/dbname',
+                  style: TextStyle(color: T.t3, fontSize: 10)),
+              const SizedBox(height: 18),
+              if (widget.db.isConnected)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 9),
+                  decoration: BoxDecoration(
+                      color: T.successLight,
+                      borderRadius: BorderRadius.circular(T.r1),
+                      border: Border.all(
+                          color: T.success.withValues(alpha: 0.25))),
+                  child: Row(children: [
+                    const Icon(Icons.check_circle_rounded,
+                        color: T.success, size: 15),
+                    const SizedBox(width: 7),
+                    Text('Connected to ${widget.db.dbName}',
+                        style: const TextStyle(
+                            color: T.success,
+                            fontSize: T.fontSm,
+                            fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              Row(children: [
+                if (widget.db.isConnected) ...[
+                  Expanded(
+                      child: _Btn(
+                          label: 'Disconnect',
+                          onTap: () {
+                            widget.db.disconnect();
+                            Navigator.pop(ctx);
+                          },
+                          outline: true,
+                          danger: true)),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                    flex: 2,
+                    child: _Btn(
+                        label: _loading ? 'Connecting…' : 'Connect',
+                        onTap: _loading ? null : _connect)),
+              ]),
             ]),
-          ],
-        ),
       ),
     );
   }
@@ -445,9 +393,6 @@ class _ConnectDialogState extends State<_ConnectDialog> {
   }
 }
 
-// ─────────────────────────────────────────────
-// BOTTOM BAR
-// ─────────────────────────────────────────────
 class _BottomBar extends StatelessWidget {
   final int idx;
   final ValueChanged<int> onTap;
@@ -464,49 +409,37 @@ class _BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: T.white,
-        border: Border(top: BorderSide(color: T.border)),
-      ),
+          color: T.white,
+          border: Border(top: BorderSide(color: T.border))),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom + 4,
-        top: 4,
-      ),
+          bottom: MediaQuery.of(context).padding.bottom + 4, top: 6),
       child: Row(
         children: List.generate(_items.length, (i) {
           final sel = i == idx;
           return Expanded(
-            child: TextButton(
-              onPressed: () => onTap(i),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(T.r1)),
-                overlayColor: T.accentLight,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 4),
-                    decoration: BoxDecoration(
+            child: GestureDetector(
+              onTap: () => onTap(i),
+              behavior: HitTestBehavior.opaque,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 5),
+                  decoration: BoxDecoration(
                       color: sel ? T.accentLight : Colors.transparent,
-                      borderRadius: BorderRadius.circular(T.r4),
-                    ),
-                    child: Icon(_items[i].icon,
-                        size: 20, color: sel ? T.accent : T.t3),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(_items[i].label,
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: sel
-                              ? FontWeight.w700
-                              : FontWeight.w400,
-                          color: sel ? T.accent : T.t3)),
-                ],
-              ),
+                      borderRadius: BorderRadius.circular(T.r4)),
+                  child: Icon(_items[i].icon,
+                      size: 21, color: sel ? T.accent : T.t3),
+                ),
+                const SizedBox(height: 3),
+                Text(_items[i].label,
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight:
+                            sel ? FontWeight.w700 : FontWeight.w500,
+                        color: sel ? T.accent : T.t3,
+                        letterSpacing: 0.2)),
+              ]),
             ),
           );
         }),
@@ -516,7 +449,7 @@ class _BottomBar extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// SCREEN: UPLOAD (now with image picker!)
+// UPLOAD SCREEN
 // ─────────────────────────────────────────────
 class UploadScreen extends StatefulWidget {
   final DbState db;
@@ -529,58 +462,188 @@ class UploadScreen extends StatefulWidget {
 class _UploadScreenState extends State<UploadScreen> {
   final _picker = ImagePicker();
   bool _loading = false;
-  String _extractedText = '';
   String _status = '';
-  File? _pickedImage;
+  Uint8List? _imageBytes;
+  String _extractedText = '';
+  Map<String, dynamic>? _schema;
+  bool _saved = false;
 
-  // Called when user taps Image card
-  Future<void> _pickImage() async {
-    final source = await _showSourceDialog();
-    if (source == null) return;
-
-    final picked = await _picker.pickImage(source: source, imageQuality: 85);
-    if (picked == null) return;
-
+  Future<void> _processText(String text) async {
     setState(() {
-      _pickedImage = File(picked.path);
-      _loading = true;
-      _status = 'Extracting text…';
-      _extractedText = '';
+      _extractedText = text;
+      _status = 'Generating schema…';
     });
-
-    final result = await ApiService.extractFromImage(File(picked.path));
-
+    final schemaResult = await ApiService.generateSchema(text);
     setState(() {
       _loading = false;
-      if (result['success'] == true) {
-        _extractedText = result['extracted_text'] ?? 'No text found';
-        _status = 'Extraction complete';
+      if (schemaResult['success'] == true) {
+        _schema = schemaResult['schema'];
+        _status = 'Schema ready';
       } else {
-        _status = 'Error: ${result['error']}';
-        _extractedText = '';
+        _status = 'Schema error: ${schemaResult['error']}';
       }
     });
   }
 
-  // Ask user: camera or gallery?
+  Future<void> _pickImage() async {
+    final source = await _showSourceDialog();
+    if (source == null) return;
+    final picked = await _picker.pickImage(source: source, imageQuality: 85);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _imageBytes = bytes;
+      _loading = true;
+      _status = 'Extracting text…';
+      _extractedText = '';
+      _schema = null;
+      _saved = false;
+    });
+    final ocrResult = await ApiService.extractFromImageBytes(bytes, picked.name);
+    if (ocrResult['success'] != true) {
+      setState(() {
+        _loading = false;
+        _status = 'OCR failed: ${ocrResult['error']}';
+      });
+      return;
+    }
+    await _processText(ocrResult['extracted_text'] ?? '');
+  }
+
+  Future<void> _recordVoice() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final audioBytes = result.files.first.bytes;
+    final filename = result.files.first.name;
+    if (audioBytes == null) return;
+    setState(() {
+      _imageBytes = null;
+      _loading = true;
+      _status = 'Transcribing audio…';
+      _extractedText = '';
+      _schema = null;
+      _saved = false;
+    });
+    final transcribeResult =
+        await ApiService.extractFromAudioBytes(audioBytes, filename);
+    if (transcribeResult['success'] != true) {
+      setState(() {
+        _loading = false;
+        _status = 'Transcription failed: ${transcribeResult['error']}';
+      });
+      return;
+    }
+    await _processText(transcribeResult['extracted_text'] ?? '');
+  }
+
+  Future<void> _pickDocument() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'txt', 'doc', 'docx'],
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.first.bytes;
+    final filename = result.files.first.name;
+    if (bytes == null) return;
+    setState(() {
+      _imageBytes = null;
+      _loading = true;
+      _status = 'Extracting text from document…';
+      _extractedText = '';
+      _schema = null;
+      _saved = false;
+    });
+    final extractResult =
+        await ApiService.extractFromDocumentBytes(bytes, filename);
+    if (extractResult['success'] != true) {
+      setState(() {
+        _loading = false;
+        _status = 'Extraction failed: ${extractResult['error']}';
+      });
+      return;
+    }
+    await _processText(extractResult['extracted_text'] ?? '');
+  }
+
+  Future<void> _pickSpreadsheet() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv', 'xlsx', 'xls'],
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.first.bytes;
+    final filename = result.files.first.name;
+    if (bytes == null) return;
+    setState(() {
+      _imageBytes = null;
+      _loading = true;
+      _status = 'Reading spreadsheet…';
+      _extractedText = '';
+      _schema = null;
+      _saved = false;
+    });
+    final extractResult =
+        await ApiService.extractFromSpreadsheetBytes(bytes, filename);
+    if (extractResult['success'] != true) {
+      setState(() {
+        _loading = false;
+        _status = 'Extraction failed: ${extractResult['error']}';
+      });
+      return;
+    }
+    // Spreadsheet saves all rows directly — no schema step needed
+    final rowsSaved = extractResult['rows_saved']?.toString() ?? '0';
+    final tableName = extractResult['table_name']?.toString() ?? 'table';
+    setState(() {
+      _loading = false;
+      _extractedText = extractResult['extracted_text'] ?? '';
+      _saved = true;
+      _status = 'Saved $rowsSaved rows to $tableName!';
+    });
+  }
+
+  Future<void> _saveToDatabase() async {
+    if (_schema == null) return;
+    setState(() {
+      _loading = true;
+      _status = 'Saving to database…';
+    });
+    final result = await ApiService.saveData(_schema!);
+    setState(() {
+      _loading = false;
+      if (result['success'] == true) {
+        _saved = true;
+        _status = 'Saved to ${result['table']}!';
+      } else {
+        _status = 'Save failed: ${result['error']}';
+      }
+    });
+  }
+
   Future<ImageSource?> _showSourceDialog() async {
     return showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: T.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(T.r3)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(T.r3))),
       builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-                color: T.border,
-                borderRadius: BorderRadius.circular(T.r4)),
-          ),
-          const SizedBox(height: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: T.border,
+                  borderRadius: BorderRadius.circular(T.r4))),
+          const SizedBox(height: 18),
           const Text('Select Image Source',
               style: TextStyle(
                   color: T.t1,
@@ -588,18 +651,99 @@ class _UploadScreenState extends State<UploadScreen> {
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           _SourceOption(
-            icon: Icons.photo_library_outlined,
-            label: 'Choose from Gallery',
-            onTap: () => Navigator.pop(context, ImageSource.gallery),
-          ),
+              icon: Icons.photo_library_outlined,
+              label: 'Choose from Gallery',
+              onTap: () => Navigator.pop(context, ImageSource.gallery)),
           const SizedBox(height: 8),
           _SourceOption(
-            icon: Icons.camera_alt_outlined,
-            label: 'Take a Photo',
-            onTap: () => Navigator.pop(context, ImageSource.camera),
-          ),
+              icon: Icons.camera_alt_outlined,
+              label: 'Take a Photo',
+              onTap: () => Navigator.pop(context, ImageSource.camera)),
           const SizedBox(height: 8),
         ]),
+      ),
+    );
+  }
+
+  void _showManualEntryDialog(BuildContext ctx) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: ctx,
+      builder: (_) => Dialog(
+        backgroundColor: T.white,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(T.r3),
+            side: const BorderSide(color: T.border)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFFFFF0F7),
+                          borderRadius: BorderRadius.circular(T.r1)),
+                      child: const Icon(Icons.edit_note_rounded,
+                          color: Color(0xFFDB2777), size: 17)),
+                  const SizedBox(width: 10),
+                  const Text('Manual Entry',
+                      style: TextStyle(
+                          color: T.t1,
+                          fontSize: T.fontLg,
+                          fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: const Icon(Icons.close_rounded,
+                          color: T.t3, size: 18)),
+                ]),
+                const SizedBox(height: 16),
+                const Text('DATA',
+                    style: TextStyle(
+                        color: T.t3,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.3)),
+                const SizedBox(height: 7),
+                Container(
+                  decoration: BoxDecoration(
+                      color: T.bg,
+                      borderRadius: BorderRadius.circular(T.r2),
+                      border: Border.all(color: T.border)),
+                  child: TextField(
+                    controller: ctrl,
+                    maxLines: 5,
+                    style: const TextStyle(color: T.t1, fontSize: T.fontBase),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. Name: John, Age: 25, City: Pune...',
+                      hintStyle: TextStyle(color: T.t4, fontSize: T.fontBase),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _Btn(
+                    label: 'Process Data',
+                    onTap: () async {
+                      final text = ctrl.text.trim();
+                      if (text.isEmpty) return;
+                      Navigator.pop(ctx);
+                      setState(() {
+                        _imageBytes = null;
+                        _loading = true;
+                        _status = 'Processing…';
+                        _extractedText = '';
+                        _schema = null;
+                        _saved = false;
+                      });
+                      await _processText(text);
+                    }),
+              ]),
+        ),
       ),
     );
   }
@@ -607,61 +751,69 @@ class _UploadScreenState extends State<UploadScreen> {
   @override
   Widget build(BuildContext ctx) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _PageHeader(
-                title: 'Import Data',
-                subtitle: 'Choose a source to extract & store',
-                badge: null),
-            const SizedBox(height: 18),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.3,
-              children: [
-                // ✅ Image card — WIRED UP
-                _InputTile(
-                    icon: Icons.image_outlined,
-                    label: 'Image / Photo',
-                    sub: 'JPG, PNG, handwritten',
-                    color: const Color(0xFF2563EB),
-                    onTap: _pickImage),
-                // Others coming soon
-                const _InputTile(
-                    icon: Icons.mic_none_rounded,
-                    label: 'Voice',
-                    sub: 'Coming Week 6',
-                    color: Color(0xFF7C3AED)),
-                const _InputTile(
-                    icon: Icons.description_outlined,
-                    label: 'Document',
-                    sub: 'Coming Week 6',
-                    color: Color(0xFFD97706)),
-                const _InputTile(
-                    icon: Icons.grid_on_rounded,
-                    label: 'Spreadsheet',
-                    sub: 'Coming Week 6',
-                    color: Color(0xFF16A34A)),
-                const _InputTile(
-                    icon: Icons.edit_note_rounded,
-                    label: 'Manual Entry',
-                    sub: 'Coming soon',
-                    color: Color(0xFFDB2777)),
-                const _InputTile(
-                    icon: Icons.link_rounded,
-                    label: 'Paste URL',
-                    sub: 'Coming soon',
-                    color: Color(0xFF0891B2)),
-              ],
-            ),
-            const SizedBox(height: 22),
+            const Text('Import Data',
+                style: TextStyle(
+                    color: T.t1,
+                    fontSize: T.font2xl,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6)),
+            const SizedBox(height: 3),
+            Text('Choose a source to extract & store',
+                style: TextStyle(
+                    color: T.t2.withValues(alpha: 0.8),
+                    fontSize: T.fontBase)),
+            const SizedBox(height: 20),
+            const _SectionLabel('Input Methods'),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child: _InputTile(
+                      icon: Icons.image_outlined,
+                      label: 'Image / Photo',
+                      sub: 'JPG, PNG, handwritten',
+                      color: const Color(0xFF3B6FE8),
+                      onTap: _pickImage)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _InputTile(
+                      icon: Icons.mic_none_rounded,
+                      label: 'Voice',
+                      sub: 'Upload audio file',
+                      color: const Color(0xFF7C3AED),
+                      onTap: _recordVoice)),
+            ]),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child: _InputTile(
+                      icon: Icons.description_outlined,
+                      label: 'Document',
+                      sub: 'PDF, Word, TXT',
+                      color: const Color(0xFFE07B10),
+                      onTap: _pickDocument)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _InputTile(
+                      icon: Icons.grid_on_rounded,
+                      label: 'Spreadsheet',
+                      sub: 'CSV, Excel files',
+                      color: const Color(0xFF12A05C),
+                      onTap: _pickSpreadsheet)),
+            ]),
+            const SizedBox(height: 10),
+            _InputTileFull(
+                icon: Icons.edit_note_rounded,
+                label: 'Manual Entry',
+                sub: 'Type or paste data directly',
+                color: const Color(0xFFDB2777),
+                onTap: () => _showManualEntryDialog(ctx)),
+            const SizedBox(height: 24),
 
-            // ── Loading indicator ──
+            // Loading
             if (_loading)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -671,11 +823,11 @@ class _UploadScreenState extends State<UploadScreen> {
                     border: Border.all(color: T.accentMid)),
                 child: Row(children: [
                   const SizedBox(
-                      width: 16,
-                      height: 16,
+                      width: 18,
+                      height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: T.accent)),
-                  const SizedBox(width: 12),
+                          strokeWidth: 2.5, color: T.accent)),
+                  const SizedBox(width: 14),
                   Text(_status,
                       style: const TextStyle(
                           color: T.accent,
@@ -684,38 +836,22 @@ class _UploadScreenState extends State<UploadScreen> {
                 ]),
               ),
 
-            // ── Picked image preview ──
-            if (_pickedImage != null && !_loading) ...[
+            // Image preview
+            if (_imageBytes != null && !_loading) ...[
+              const SizedBox(height: 18),
               const _SectionLabel('Selected Image'),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(T.r2),
-                child: Image.file(_pickedImage!,
-                    width: double.infinity,
-                    height: 180,
-                    fit: BoxFit.cover),
+                child: Image.memory(_imageBytes!,
+                    width: double.infinity, height: 170, fit: BoxFit.cover),
               ),
-              const SizedBox(height: 16),
             ],
 
-            // ── Extracted text result ──
-            if (_extractedText.isNotEmpty) ...[
-              Row(children: [
-                const _SectionLabel('Extracted Text'),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: T.successLight,
-                      borderRadius: BorderRadius.circular(T.r4)),
-                  child: const Text('✓ Done',
-                      style: TextStyle(
-                          color: T.success,
-                          fontSize: T.fontSm,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ]),
+            // Extracted text
+            if (_extractedText.isNotEmpty && !_loading) ...[
+              const SizedBox(height: 18),
+              const _SectionLabel('Extracted Text'),
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
@@ -726,25 +862,191 @@ class _UploadScreenState extends State<UploadScreen> {
                     border: Border.all(color: T.border)),
                 child: Text(_extractedText,
                     style: const TextStyle(
-                        color: T.t1,
-                        fontSize: T.fontBase,
-                        height: 1.6)),
-              ),
-              const SizedBox(height: 12),
-              _Btn(
-                label: 'Save to Database →',
-                onTap: () {},
+                        color: T.t1, fontSize: T.fontBase, height: 1.6)),
               ),
             ],
 
-            // ── Empty state ──
-            if (!_loading && _extractedText.isEmpty && _pickedImage == null) ...[
+            // Saved success banner (for spreadsheet)
+            if (_saved && _schema == null && !_loading) ...[
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: T.successLight,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(
+                        color: T.success.withValues(alpha: 0.3))),
+                child: Row(children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: T.success, size: 20),
+                  const SizedBox(width: 10),
+                  Text(_status,
+                      style: const TextStyle(
+                          color: T.success,
+                          fontSize: T.fontMd,
+                          fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ],
+
+            // Schema preview (for image/voice/document)
+            if (_schema != null && !_loading) ...[
+              const SizedBox(height: 18),
+              Row(children: [
+                const _SectionLabel('Generated Schema'),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF3B6FE8), Color(0xFF6B47DC)]),
+                      borderRadius: BorderRadius.circular(T.r4)),
+                  child: Text(_schema!['table_name'] ?? '',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: T.fontSm,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                    color: T.white,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: Column(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                        color: T.bg,
+                        borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(T.r2),
+                            topRight: Radius.circular(T.r2))),
+                    child: Row(children: const [
+                      Expanded(
+                          child: Text('FIELD',
+                              style: TextStyle(
+                                  color: T.t3,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1))),
+                      Expanded(
+                          child: Text('TYPE',
+                              style: TextStyle(
+                                  color: T.t3,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1))),
+                      Expanded(
+                          flex: 2,
+                          child: Text('VALUE',
+                              style: TextStyle(
+                                  color: T.t3,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1))),
+                    ]),
+                  ),
+                  ...(_schema!['fields'] as List).map((field) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 11),
+                      decoration: const BoxDecoration(
+                          border:
+                              Border(top: BorderSide(color: T.border))),
+                      child: Row(children: [
+                        Expanded(
+                            child: Text(field['name'] ?? '',
+                                style: const TextStyle(
+                                    color: T.t1,
+                                    fontSize: T.fontBase,
+                                    fontWeight: FontWeight.w600))),
+                        Expanded(
+                            child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                              color: T.accentLight,
+                              borderRadius:
+                                  BorderRadius.circular(T.r1)),
+                          child: Text(field['type'] ?? '',
+                              style: const TextStyle(
+                                  color: T.accent,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700)),
+                        )),
+                        Expanded(
+                            flex: 2,
+                            child: Text(
+                                field['value']?.toString() ?? '',
+                                style: const TextStyle(
+                                    color: T.t2,
+                                    fontSize: T.fontBase))),
+                      ]),
+                    );
+                  }),
+                ]),
+              ),
+              const SizedBox(height: 14),
+              _saved
+                  ? Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                          color: T.successLight,
+                          borderRadius: BorderRadius.circular(T.r2),
+                          border: Border.all(
+                              color: T.success.withValues(alpha: 0.3))),
+                      child: Row(children: [
+                        const Icon(Icons.check_circle_rounded,
+                            color: T.success, size: 20),
+                        const SizedBox(width: 10),
+                        Text(_status,
+                            style: const TextStyle(
+                                color: T.success,
+                                fontSize: T.fontMd,
+                                fontWeight: FontWeight.w600)),
+                      ]),
+                    )
+                  : _Btn(
+                      label: 'Save to Database →',
+                      onTap: _saveToDatabase),
+            ],
+
+            // Empty state
+            if (!_loading &&
+                _extractedText.isEmpty &&
+                _imageBytes == null &&
+                !_saved) ...[
+              const SizedBox(height: 8),
               const _SectionLabel('Recent Activity'),
               const SizedBox(height: 10),
-              const _EmptyCard(
-                icon: Icons.inbox_outlined,
-                title: 'No imports yet',
-                sub: 'Tap Image / Photo to get started',
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 36),
+                decoration: BoxDecoration(
+                    color: T.white,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: Column(children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: T.accentLight, shape: BoxShape.circle),
+                    child: const Icon(Icons.upload_rounded,
+                        color: T.accent, size: 26),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('No imports yet',
+                      style: TextStyle(
+                          color: T.t1,
+                          fontSize: T.fontLg,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  const Text('Choose an input method above to get started',
+                      style: TextStyle(color: T.t3, fontSize: T.fontBase)),
+                ]),
               ),
             ],
           ]),
@@ -752,7 +1054,6 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 }
 
-// Source picker option row
 class _SourceOption extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -768,8 +1069,8 @@ class _SourceOption extends StatelessWidget {
           borderRadius: BorderRadius.circular(T.r2),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(T.r2),
                 border: Border.all(color: T.border)),
@@ -782,8 +1083,7 @@ class _SourceOption extends StatelessWidget {
                       fontSize: T.fontMd,
                       fontWeight: FontWeight.w600)),
               const Spacer(),
-              const Icon(Icons.chevron_right_rounded,
-                  color: T.t3, size: 18),
+              const Icon(Icons.chevron_right_rounded, color: T.t3, size: 18),
             ]),
           ),
         ),
@@ -791,71 +1091,275 @@ class _SourceOption extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// SCREEN: DATABASE
+// DATABASE SCREEN
 // ─────────────────────────────────────────────
-class DatabaseScreen extends StatelessWidget {
+class DatabaseScreen extends StatefulWidget {
   final DbState db;
   const DatabaseScreen({super.key, required this.db});
 
   @override
+  State<DatabaseScreen> createState() => _DatabaseScreenState();
+}
+
+class _DatabaseScreenState extends State<DatabaseScreen> {
+  List<Map<String, dynamic>> _tables = [];
+  bool _loading = false;
+  String? _selectedTable;
+  List<String> _columns = [];
+  List<Map<String, dynamic>> _rows = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTables();
+  }
+
+  Future<void> _loadTables() async {
+    setState(() => _loading = true);
+    final result = await ApiService.getTables();
+    setState(() {
+      _loading = false;
+      if (result['success'] == true) {
+        _tables = List<Map<String, dynamic>>.from(result['tables'] ?? []);
+      }
+    });
+  }
+
+  Future<void> _loadTableData(String tableName) async {
+    setState(() {
+      _selectedTable = tableName;
+      _loading = true;
+    });
+    final result = await ApiService.getTableRows(tableName);
+    setState(() {
+      _loading = false;
+      if (result['success'] == true) {
+        _columns = List<String>.from(result['columns'] ?? []);
+        _rows = List<Map<String, dynamic>>.from(result['rows'] ?? []);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext ctx) {
-    return AnimatedBuilder(
-      animation: db,
-      builder: (ctx, _) {
-        if (!db.isConnected) return const _NoDbState();
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _PageHeader(
-                    title: 'Database',
-                    subtitle: db.dbName,
-                    badge: 'Connected'),
-                const SizedBox(height: 16),
-                Row(children: const [
-                  Expanded(
-                      child: _StatBox(
-                          label: 'Tables',
-                          value: '0',
-                          icon: Icons.table_rows_outlined)),
-                  SizedBox(width: 8),
-                  Expanded(
-                      child: _StatBox(
-                          label: 'Records',
-                          value: '0',
-                          icon: Icons.data_array_rounded)),
-                  SizedBox(width: 8),
-                  Expanded(
-                      child: _StatBox(
-                          label: 'Size',
-                          value: '0 KB',
-                          icon: Icons.storage_outlined)),
-                ]),
-                const SizedBox(height: 22),
-                Row(children: [
-                  const _SectionLabel('Tables'),
-                  const Spacer(),
-                  _SmallBtn(
-                      icon: Icons.add_rounded,
-                      label: 'New Table',
-                      onTap: () {}),
-                ]),
-                const SizedBox(height: 10),
-                const _EmptyCard(
-                  icon: Icons.table_view_outlined,
-                  title: 'No tables yet',
-                  sub: 'Upload data to auto-generate schemas',
-                ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Database',
+                    style: TextStyle(
+                        color: T.t1,
+                        fontSize: T.font2xl,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.6)),
+                const SizedBox(height: 3),
+                Text('${_tables.length} tables',
+                    style: TextStyle(
+                        color: T.t2.withValues(alpha: 0.8),
+                        fontSize: T.fontBase)),
               ]),
-        );
-      },
+              const Spacer(),
+              if (_tables.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                      color: T.successLight,
+                      borderRadius: BorderRadius.circular(T.r4),
+                      border: Border.all(
+                          color: T.success.withValues(alpha: 0.3))),
+                  child: Row(children: [
+                    Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                            shape: BoxShape.circle, color: T.success)),
+                    const SizedBox(width: 6),
+                    const Text('Live',
+                        style: TextStyle(
+                            color: T.success,
+                            fontSize: T.fontSm,
+                            fontWeight: FontWeight.w700)),
+                  ]),
+                ),
+            ]),
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(
+                  child: _StatBox(
+                      label: 'Tables',
+                      value: '${_tables.length}',
+                      icon: Icons.table_rows_outlined,
+                      color: T.accent)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _StatBox(
+                      label: 'Records',
+                      value:
+                          '${_tables.fold(0, (sum, t) => sum + (t['row_count'] as int? ?? 0))}',
+                      icon: Icons.data_array_rounded,
+                      color: const Color(0xFF7C3AED))),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _StatBox(
+                      label: 'Status',
+                      value: 'Live',
+                      icon: Icons.storage_outlined,
+                      color: T.success)),
+            ]),
+            const SizedBox(height: 22),
+            Row(children: [
+              const _SectionLabel('Tables'),
+              const Spacer(),
+              _SmallBtn(
+                  icon: Icons.refresh_rounded,
+                  label: 'Refresh',
+                  onTap: _loadTables),
+            ]),
+            const SizedBox(height: 10),
+            if (_loading)
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(color: T.accent)))
+            else if (_tables.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 36),
+                decoration: BoxDecoration(
+                    color: T.white,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: Column(children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: T.accentLight, shape: BoxShape.circle),
+                    child: const Icon(Icons.table_view_outlined,
+                        color: T.accent, size: 26),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('No tables yet',
+                      style: TextStyle(
+                          color: T.t1,
+                          fontSize: T.fontLg,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  const Text('Upload data to auto-generate schemas',
+                      style: TextStyle(color: T.t3, fontSize: T.fontBase)),
+                ]),
+              )
+            else
+              ..._tables.map((table) => _TableCard(
+                    table: table,
+                    isSelected: _selectedTable == table['name'],
+                    onTap: () => _loadTableData(table['name']),
+                  )),
+            if (_selectedTable != null && !_loading && _rows.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              _SectionLabel('$_selectedTable'),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                    color: T.white,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(T.bg),
+                    border: TableBorder.all(color: T.border, width: 1),
+                    columns: _columns
+                        .map((c) => DataColumn(
+                            label: Text(c,
+                                style: const TextStyle(
+                                    color: T.t1,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: T.fontSm))))
+                        .toList(),
+                    rows: _rows
+                        .map((row) => DataRow(
+                            cells: _columns
+                                .map((c) => DataCell(Text(
+                                    row[c]?.toString() ?? '',
+                                    style: const TextStyle(
+                                        color: T.t2, fontSize: T.fontSm))))
+                                .toList()))
+                        .toList(),
+                  ),
+                ),
+              ),
+            ],
+          ]),
     );
   }
 }
 
+class _TableCard extends StatelessWidget {
+  final Map<String, dynamic> table;
+  final bool isSelected;
+  final VoidCallback onTap;
+  const _TableCard(
+      {required this.table,
+      required this.isSelected,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext ctx) => Material(
+        color: isSelected ? T.accentLight : T.white,
+        borderRadius: BorderRadius.circular(T.r2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(T.r2),
+          onTap: onTap,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(T.r2),
+                border:
+                    Border.all(color: isSelected ? T.accent : T.border)),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                    color: isSelected ? T.accentMid : T.accentLight,
+                    borderRadius: BorderRadius.circular(T.r1)),
+                child: Icon(Icons.table_rows_rounded,
+                    color: T.accent, size: 16),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(table['name'] ?? '',
+                        style: const TextStyle(
+                            color: T.t1,
+                            fontSize: T.fontMd,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(
+                        '${(table['columns'] as List?)?.length ?? 0} columns · ${table['row_count']} rows',
+                        style: const TextStyle(
+                            color: T.t3, fontSize: T.fontSm)),
+                  ])),
+              Icon(
+                  isSelected
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.chevron_right_rounded,
+                  color: isSelected ? T.accent : T.t3,
+                  size: 20),
+            ]),
+          ),
+        ),
+      );
+}
+
 // ─────────────────────────────────────────────
-// SCREEN: QUERY
+// QUERY SCREEN
 // ─────────────────────────────────────────────
 class QueryScreen extends StatefulWidget {
   final DbState db;
@@ -867,123 +1371,244 @@ class QueryScreen extends StatefulWidget {
 
 class _QueryScreenState extends State<QueryScreen> {
   final _ctrl = TextEditingController();
+  bool _loading = false;
   bool _showSql = false;
   String _sql = '';
+  List<String> _columns = [];
+  List<Map<String, dynamic>> _rows = [];
+  String _error = '';
 
   final _suggestions = const [
-    'Show all records from students table',
+    'Show all records from student_details',
     'Find entries with marks above 90',
     'Count total records by category',
     'Get the latest 10 entries',
   ];
 
+  Future<void> _runQuery() async {
+    final q = _ctrl.text.trim();
+    if (q.isEmpty) return;
+    setState(() {
+      _loading = true;
+      _sql = '';
+      _columns = [];
+      _rows = [];
+      _error = '';
+    });
+    final result = await ApiService.nlToSql(q);
+    setState(() {
+      _loading = false;
+      if (result['success'] == true) {
+        _sql = result['sql'] ?? '';
+        _columns = List<String>.from(result['columns'] ?? []);
+        _rows = List<Map<String, dynamic>>.from(result['rows'] ?? []);
+      } else {
+        _error = result['error'] ?? 'Unknown error';
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext ctx) {
-    return AnimatedBuilder(
-      animation: widget.db,
-      builder: (ctx, _) {
-        if (!widget.db.isConnected) return const _NoDbState();
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _PageHeader(
-                    title: 'Query',
-                    subtitle: 'Ask in plain English',
-                    badge: null),
-                const SizedBox(height: 16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Query',
+                style: TextStyle(
+                    color: T.t1,
+                    fontSize: T.font2xl,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6)),
+            const SizedBox(height: 3),
+            Text('Ask in plain English',
+                style: TextStyle(
+                    color: T.t2.withValues(alpha: 0.8),
+                    fontSize: T.fontBase)),
+            const SizedBox(height: 20),
+            Container(
+              decoration: BoxDecoration(
+                  color: T.white,
+                  borderRadius: BorderRadius.circular(T.r2),
+                  border: Border.all(color: T.border),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3))
+                  ]),
+              child: Column(children: [
+                TextField(
+                  controller: _ctrl,
+                  maxLines: 3,
+                  minLines: 2,
+                  style: const TextStyle(color: T.t1, fontSize: T.fontMd),
+                  decoration: const InputDecoration(
+                    hintText:
+                        'e.g. "Show all students with marks above 80"',
+                    hintStyle: TextStyle(color: T.t4, fontSize: T.fontBase),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                  ),
+                ),
                 Container(
-                  decoration: BoxDecoration(
-                      color: T.white,
-                      borderRadius: BorderRadius.circular(T.r2),
-                      border: Border.all(color: T.border),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2))
-                      ]),
-                  child: Column(children: [
-                    TextField(
-                      controller: _ctrl,
-                      maxLines: 3,
-                      minLines: 2,
-                      style: const TextStyle(
-                          color: T.t1, fontSize: T.fontMd),
-                      decoration: const InputDecoration(
-                        hintText:
-                            'e.g. "Show all students with marks above 80"',
-                        hintStyle: TextStyle(
-                            color: T.t4, fontSize: T.fontBase),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(14),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                      decoration: const BoxDecoration(
-                          border: Border(
-                              top: BorderSide(color: T.border))),
+                  padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
+                  decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: T.border))),
+                  child: Row(children: [
+                    GestureDetector(
+                      onTap: () =>
+                          setState(() => _showSql = !_showSql),
                       child: Row(children: [
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => _showSql = !_showSql),
-                          child: Row(children: [
-                            Icon(
-                              _showSql
-                                  ? Icons.toggle_on_rounded
-                                  : Icons.toggle_off_rounded,
-                              color: _showSql ? T.accent : T.t3,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 5),
-                            Text('Show SQL',
-                                style: TextStyle(
-                                    fontSize: T.fontSm,
-                                    color:
-                                        _showSql ? T.accent : T.t2)),
-                          ]),
-                        ),
-                        const Spacer(),
-                        _Btn(
-                          label: 'Run Query',
-                          onTap: () => setState(() {
-                            _sql =
-                                'SELECT * FROM students\nWHERE marks > 80\nORDER BY marks DESC;';
-                          }),
-                          small: true,
-                        ),
+                        Icon(
+                            _showSql
+                                ? Icons.toggle_on_rounded
+                                : Icons.toggle_off_rounded,
+                            color: _showSql ? T.accent : T.t3,
+                            size: 22),
+                        const SizedBox(width: 6),
+                        Text('Show SQL',
+                            style: TextStyle(
+                                fontSize: T.fontSm,
+                                fontWeight: FontWeight.w500,
+                                color: _showSql ? T.accent : T.t2)),
                       ]),
                     ),
+                    const Spacer(),
+                    _Btn(
+                        label: _loading ? 'Running…' : 'Run Query',
+                        onTap: _loading ? null : _runQuery,
+                        small: true),
                   ]),
                 ),
-                if (_showSql && _sql.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  _SqlBlock(sql: _sql),
-                ],
-                const SizedBox(height: 20),
-                const _SectionLabel('Try asking'),
-                const SizedBox(height: 8),
-                ..._suggestions.map((s) => _SuggestionRow(
-                    text: s,
-                    onTap: () => setState(() => _ctrl.text = s))),
-                const SizedBox(height: 20),
-                const _SectionLabel('Results'),
-                const SizedBox(height: 8),
-                const _EmptyCard(
-                    icon: Icons.search_off_rounded,
-                    title: 'No results yet',
-                    sub: 'Run a query to see data here'),
               ]),
-        );
-      },
+            ),
+            if (_showSql && _sql.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _SqlBlock(sql: _sql),
+            ],
+            if (_error.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                    color: T.dangerLight,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(
+                        color: T.danger.withValues(alpha: 0.3))),
+                child: Row(children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: T.danger, size: 17),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Text(_error,
+                          style: const TextStyle(
+                              color: T.danger, fontSize: T.fontBase))),
+                ]),
+              ),
+            ],
+            if (_loading)
+              const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                      child: CircularProgressIndicator(color: T.accent))),
+            if (_rows.isNotEmpty && !_loading) ...[
+              const SizedBox(height: 22),
+              Row(children: [
+                const _SectionLabel('Results'),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: T.successLight,
+                      borderRadius: BorderRadius.circular(T.r4),
+                      border: Border.all(
+                          color: T.success.withValues(alpha: 0.3))),
+                  child: Text('${_rows.length} rows',
+                      style: const TextStyle(
+                          color: T.success,
+                          fontSize: T.fontSm,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                    color: T.white,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(T.bg),
+                    border: TableBorder.all(color: T.border, width: 1),
+                    columns: _columns
+                        .map((c) => DataColumn(
+                            label: Text(c,
+                                style: const TextStyle(
+                                    color: T.t1,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: T.fontSm))))
+                        .toList(),
+                    rows: _rows
+                        .map((row) => DataRow(
+                            cells: _columns
+                                .map((c) => DataCell(Text(
+                                    row[c]?.toString() ?? '',
+                                    style: const TextStyle(
+                                        color: T.t2, fontSize: T.fontSm))))
+                                .toList()))
+                        .toList(),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 22),
+            const _SectionLabel('Try asking'),
+            const SizedBox(height: 10),
+            ..._suggestions.map((s) => _SuggestionRow(
+                text: s,
+                onTap: () => setState(() => _ctrl.text = s))),
+            if (_rows.isEmpty && !_loading && _error.isEmpty) ...[
+              const SizedBox(height: 22),
+              const _SectionLabel('Results'),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 36),
+                decoration: BoxDecoration(
+                    color: T.white,
+                    borderRadius: BorderRadius.circular(T.r2),
+                    border: Border.all(color: T.border)),
+                child: Column(children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: T.accentLight, shape: BoxShape.circle),
+                    child: const Icon(Icons.search_rounded,
+                        color: T.accent, size: 26),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('No results yet',
+                      style: TextStyle(
+                          color: T.t1,
+                          fontSize: T.fontLg,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  const Text('Run a query to see data here',
+                      style: TextStyle(color: T.t3, fontSize: T.fontBase)),
+                ]),
+              ),
+            ],
+          ]),
     );
   }
 }
 
 // ─────────────────────────────────────────────
-// SCREEN: SETTINGS
+// SETTINGS SCREEN
 // ─────────────────────────────────────────────
 class SettingsScreen extends StatefulWidget {
   final DbState db;
@@ -1002,38 +1627,39 @@ class _SettingsState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext ctx) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _PageHeader(
-                title: 'Settings',
-                subtitle: 'APIs & preferences',
-                badge: null),
-            const SizedBox(height: 20),
+            const Text('Settings',
+                style: TextStyle(
+                    color: T.t1,
+                    fontSize: T.font2xl,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6)),
+            const SizedBox(height: 3),
+            Text('APIs & preferences',
+                style: TextStyle(
+                    color: T.t2.withValues(alpha: 0.8),
+                    fontSize: T.fontBase)),
+            const SizedBox(height: 22),
             const _SectionLabel('API Keys'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             _KeyTile(
                 icon: Icons.auto_awesome_rounded,
                 iconBg: T.accentLight,
                 iconColor: T.accent,
-                title: 'Claude API Key',
-                sub: 'Schema generation & NL→SQL'),
+                title: 'Groq API Key',
+                sub: 'Schema generation, NL→SQL & Voice'),
             _KeyTile(
                 icon: Icons.image_search_rounded,
                 iconBg: T.warningLight,
                 iconColor: T.warning,
                 title: 'Google Vision API Key',
-                sub: 'Image OCR extraction'),
-            _KeyTile(
-                icon: Icons.mic_rounded,
-                iconBg: const Color(0xFFF5F3FF),
-                iconColor: const Color(0xFF7C3AED),
-                title: 'Whisper API Key',
-                sub: 'Voice transcription'),
-            const SizedBox(height: 20),
+                sub: 'Enhanced image OCR (optional)'),
+            const SizedBox(height: 22),
             const _SectionLabel('Extraction'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             _ToggleRow(
                 icon: Icons.schema_outlined,
                 iconBg: T.successLight,
@@ -1058,9 +1684,9 @@ class _SettingsState extends State<SettingsScreen> {
                 sub: 'Show reliability of each field',
                 value: _confidence,
                 onChanged: (v) => setState(() => _confidence = v)),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                   color: T.white,
                   borderRadius: BorderRadius.circular(T.r2),
@@ -1077,64 +1703,61 @@ class _SettingsState extends State<SettingsScreen> {
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                            horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
                             color: T.accentLight,
-                            borderRadius:
-                                BorderRadius.circular(T.r4)),
-                        child: Text(
-                            '${(_threshold * 100).round()}%',
+                            borderRadius: BorderRadius.circular(T.r4)),
+                        child: Text('${(_threshold * 100).round()}%',
                             style: const TextStyle(
                                 color: T.accent,
                                 fontSize: T.fontSm,
                                 fontWeight: FontWeight.w700)),
                       ),
                     ]),
-                    const SizedBox(height: 2),
-                    const Text(
-                        'Verify fields below this confidence level',
-                        style:
-                            TextStyle(color: T.t3, fontSize: T.fontSm)),
+                    const SizedBox(height: 3),
+                    const Text('Verify fields below this confidence level',
+                        style: TextStyle(color: T.t3, fontSize: T.fontSm)),
                     SliderTheme(
                       data: SliderTheme.of(ctx).copyWith(
-                        activeTrackColor: T.accent,
-                        inactiveTrackColor: T.border,
-                        thumbColor: T.accent,
-                        overlayColor: T.accentLight,
-                        trackHeight: 3,
-                        thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 7),
-                      ),
+                          activeTrackColor: T.accent,
+                          inactiveTrackColor: T.border,
+                          thumbColor: T.accent,
+                          overlayColor: T.accentLight,
+                          trackHeight: 3,
+                          thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 7)),
                       child: Slider(
-                        value: _threshold,
-                        min: 0.5,
-                        max: 1.0,
-                        divisions: 10,
-                        onChanged: (v) =>
-                            setState(() => _threshold = v),
-                      ),
+                          value: _threshold,
+                          min: 0.5,
+                          max: 1.0,
+                          divisions: 10,
+                          onChanged: (v) =>
+                              setState(() => _threshold = v)),
                     ),
                   ]),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             const _SectionLabel('About'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                   color: T.white,
                   borderRadius: BorderRadius.circular(T.r2),
                   border: Border.all(color: T.border)),
               child: Row(children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                      color: T.accentLight,
+                      gradient: const LinearGradient(colors: [
+                        Color(0xFF3B6FE8),
+                        Color(0xFF6B47DC)
+                      ]),
                       borderRadius: BorderRadius.circular(T.r1)),
                   child: const Icon(Icons.hub_rounded,
-                      color: T.accent, size: 16),
+                      color: Colors.white, size: 18),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1142,10 +1765,10 @@ class _SettingsState extends State<SettingsScreen> {
                           style: TextStyle(
                               color: T.t1,
                               fontSize: T.fontMd,
-                              fontWeight: FontWeight.w600)),
+                              fontWeight: FontWeight.w700)),
                       Text('Multimodal Database Management',
-                          style: TextStyle(
-                              color: T.t3, fontSize: T.fontSm)),
+                          style:
+                              TextStyle(color: T.t3, fontSize: T.fontSm)),
                     ]),
               ]),
             ),
@@ -1157,55 +1780,6 @@ class _SettingsState extends State<SettingsScreen> {
 // ─────────────────────────────────────────────
 // REUSABLE WIDGETS
 // ─────────────────────────────────────────────
-
-class _PageHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String? badge;
-  const _PageHeader(
-      {required this.title,
-      required this.subtitle,
-      required this.badge});
-
-  @override
-  Widget build(BuildContext ctx) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: T.t1,
-                        fontSize: T.font2xl,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5)),
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: const TextStyle(
-                        color: T.t2, fontSize: T.fontBase)),
-              ]),
-          if (badge != null) ...[
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                  color: T.successLight,
-                  borderRadius: BorderRadius.circular(T.r4),
-                  border: Border.all(
-                      color: T.success.withValues(alpha: 0.25))),
-              child: Text(badge!,
-                  style: const TextStyle(
-                      color: T.success,
-                      fontSize: T.fontSm,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ],
-      );
-}
-
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
@@ -1216,7 +1790,7 @@ class _SectionLabel extends StatelessWidget {
           color: T.t3,
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          letterSpacing: 1.4));
+          letterSpacing: 1.5));
 }
 
 class _InputTile extends StatelessWidget {
@@ -1240,32 +1814,97 @@ class _InputTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(T.r2),
           onTap: onTap ?? () {},
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(T.r2),
-                border: Border.all(
-                    color: onTap != null ? T.border : T.border)),
+                border: Border.all(color: T.border),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.025),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2))
+                ]),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(7),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(T.r1)),
-                    child: Icon(icon, color: color, size: 17),
+                    child: Icon(icon, color: color, size: 19),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 16),
                   Text(label,
                       style: const TextStyle(
                           color: T.t1,
-                          fontSize: T.fontBase,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 1),
+                          fontSize: T.fontMd,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
                   Text(sub,
-                      style: const TextStyle(
-                          color: T.t3, fontSize: T.fontSm)),
+                      style:
+                          const TextStyle(color: T.t3, fontSize: T.fontSm)),
                 ]),
+          ),
+        ),
+      );
+}
+
+class _InputTileFull extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sub;
+  final Color color;
+  final VoidCallback? onTap;
+  const _InputTileFull(
+      {required this.icon,
+      required this.label,
+      required this.sub,
+      required this.color,
+      this.onTap});
+
+  @override
+  Widget build(BuildContext ctx) => Material(
+        color: T.white,
+        borderRadius: BorderRadius.circular(T.r2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(T.r2),
+          onTap: onTap ?? () {},
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(T.r2),
+                border: Border.all(color: T.border),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.025),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2))
+                ]),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(T.r1)),
+                child: Icon(icon, color: color, size: 19),
+              ),
+              const SizedBox(width: 14),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(label,
+                    style: const TextStyle(
+                        color: T.t1,
+                        fontSize: T.fontMd,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(sub,
+                    style:
+                        const TextStyle(color: T.t3, fontSize: T.fontSm)),
+              ]),
+              const Spacer(),
+              const Icon(Icons.chevron_right_rounded, color: T.t3, size: 20),
+            ]),
           ),
         ),
       );
@@ -1275,109 +1914,43 @@ class _StatBox extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final Color color;
   const _StatBox(
       {required this.label,
       required this.value,
-      required this.icon});
+      required this.icon,
+      required this.color});
 
   @override
   Widget build(BuildContext ctx) => Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
             color: T.white,
             borderRadius: BorderRadius.circular(T.r2),
-            border: Border.all(color: T.border)),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: T.t4, size: 15),
-              const SizedBox(height: 8),
-              Text(value,
-                  style: const TextStyle(
-                      color: T.t1,
-                      fontSize: T.fontXl,
-                      fontWeight: FontWeight.w800)),
-              Text(label,
-                  style: const TextStyle(
-                      color: T.t3, fontSize: T.fontSm)),
+            border: Border.all(color: T.border),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.025),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2))
             ]),
-      );
-}
-
-class _EmptyCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String sub;
-  const _EmptyCard(
-      {required this.icon, required this.title, required this.sub});
-
-  @override
-  Widget build(BuildContext ctx) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 32),
-        decoration: BoxDecoration(
-            color: T.white,
-            borderRadius: BorderRadius.circular(T.r2),
-            border: Border.all(color: T.border)),
-        child: Column(children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-                color: T.bg,
-                shape: BoxShape.circle,
-                border: Border.all(color: T.border)),
-            child: Icon(icon, color: T.t4, size: 22),
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(T.r1)),
+            child: Icon(icon, color: color, size: 14),
           ),
-          const SizedBox(height: 12),
-          Text(title,
+          const SizedBox(height: 10),
+          Text(value,
               style: const TextStyle(
                   color: T.t1,
-                  fontSize: T.fontMd,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 3),
-          Text(sub,
-              style:
-                  const TextStyle(color: T.t3, fontSize: T.fontBase)),
+                  fontSize: T.fontXl,
+                  fontWeight: FontWeight.w800)),
+          Text(label,
+              style: const TextStyle(color: T.t3, fontSize: T.fontSm)),
         ]),
-      );
-}
-
-class _NoDbState extends StatelessWidget {
-  const _NoDbState();
-
-  @override
-  Widget build(BuildContext ctx) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(36),
-          child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                      color: T.accentLight,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: T.accentMid)),
-                  child: const Icon(Icons.storage_outlined,
-                      color: T.accent, size: 30),
-                ),
-                const SizedBox(height: 16),
-                const Text('No Database Connected',
-                    style: TextStyle(
-                        color: T.t1,
-                        fontSize: T.fontXl,
-                        fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                const Text(
-                  'Tap "Connect DB" at the top\nto link your MySQL database.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: T.t2,
-                      fontSize: T.fontBase,
-                      height: 1.6),
-                ),
-              ]),
-        ),
       );
 }
 
@@ -1388,27 +1961,34 @@ class _SqlBlock extends StatelessWidget {
   @override
   Widget build(BuildContext ctx) => Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
             color: const Color(0xFF0F172A),
             borderRadius: BorderRadius.circular(T.r2)),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('GENERATED SQL',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                  color: T.accent.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(T.r1)),
+              child: const Text('SQL',
                   style: TextStyle(
-                      color: Color(0xFF64748B),
+                      color: Color(0xFF7DD3FC),
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 1.3)),
-              const SizedBox(height: 6),
-              Text(sql,
-                  style: const TextStyle(
-                      color: Color(0xFF7DD3FC),
-                      fontSize: T.fontBase,
-                      fontFamily: 'monospace',
-                      height: 1.6)),
-            ]),
+                      letterSpacing: 1)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Text(sql,
+              style: const TextStyle(
+                  color: Color(0xFF7DD3FC),
+                  fontSize: T.fontBase,
+                  fontFamily: 'monospace',
+                  height: 1.6)),
+        ]),
       );
 }
 
@@ -1426,20 +2006,25 @@ class _SuggestionRow extends StatelessWidget {
           onTap: onTap,
           child: Container(
             width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 10),
+            margin: const EdgeInsets.only(bottom: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(T.r2),
                 border: Border.all(color: T.border)),
             child: Row(children: [
-              const Icon(Icons.north_west_rounded,
-                  color: T.t4, size: 13),
-              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                    color: T.accentLight,
+                    borderRadius: BorderRadius.circular(T.r1)),
+                child: const Icon(Icons.north_west_rounded,
+                    color: T.accent, size: 12),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                   child: Text(text,
-                      style: const TextStyle(
-                          color: T.t2, fontSize: T.fontBase))),
+                      style:
+                          const TextStyle(color: T.t2, fontSize: T.fontBase))),
             ]),
           ),
         ),
@@ -1461,21 +2046,20 @@ class _KeyTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext ctx) => Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
             color: T.white,
             borderRadius: BorderRadius.circular(T.r2),
             border: Border.all(color: T.border)),
         child: Row(children: [
           Container(
-            padding: const EdgeInsets.all(7),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(T.r1)),
-            child: Icon(icon, color: iconColor, size: 15),
+                color: iconBg, borderRadius: BorderRadius.circular(T.r1)),
+            child: Icon(icon, color: iconColor, size: 16),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1486,11 +2070,9 @@ class _KeyTile extends StatelessWidget {
                         fontSize: T.fontBase,
                         fontWeight: FontWeight.w600)),
                 Text(sub,
-                    style: const TextStyle(
-                        color: T.t3, fontSize: T.fontSm)),
+                    style: const TextStyle(color: T.t3, fontSize: T.fontSm)),
               ])),
-          _SmallBtn(
-              icon: Icons.edit_rounded, label: 'Set', onTap: () {}),
+          _SmallBtn(icon: Icons.edit_rounded, label: 'Set', onTap: () {}),
         ]),
       );
 }
@@ -1514,21 +2096,20 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext ctx) => Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
             color: T.white,
             borderRadius: BorderRadius.circular(T.r2),
             border: Border.all(color: T.border)),
         child: Row(children: [
           Container(
-            padding: const EdgeInsets.all(7),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(T.r1)),
-            child: Icon(icon, color: iconColor, size: 15),
+                color: iconBg, borderRadius: BorderRadius.circular(T.r1)),
+            child: Icon(icon, color: iconColor, size: 16),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1539,11 +2120,10 @@ class _ToggleRow extends StatelessWidget {
                         fontSize: T.fontBase,
                         fontWeight: FontWeight.w600)),
                 Text(sub,
-                    style: const TextStyle(
-                        color: T.t3, fontSize: T.fontSm)),
+                    style: const TextStyle(color: T.t3, fontSize: T.fontSm)),
               ])),
           Transform.scale(
-            scale: 0.8,
+            scale: 0.85,
             child: Switch(
               value: value,
               onChanged: onChanged,
@@ -1557,22 +2137,18 @@ class _ToggleRow extends StatelessWidget {
       );
 }
 
-// ─────────────────────────────────────────────
-// PRIMITIVE BUTTONS
-// ─────────────────────────────────────────────
 class _Btn extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final bool outline;
   final bool danger;
   final bool small;
-  const _Btn({
-    required this.label,
-    required this.onTap,
-    this.outline = false,
-    this.danger = false,
-    this.small = false,
-  });
+  const _Btn(
+      {required this.label,
+      required this.onTap,
+      this.outline = false,
+      this.danger = false,
+      this.small = false});
 
   @override
   Widget build(BuildContext ctx) {
@@ -1601,8 +2177,7 @@ class _Btn extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: EdgeInsets.symmetric(
-              horizontal: small ? 14 : 18,
-              vertical: small ? 8 : 11),
+              horizontal: small ? 16 : 20, vertical: small ? 9 : 13),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(T.r1),
               border: Border.fromBorderSide(side)),
@@ -1611,7 +2186,8 @@ class _Btn extends StatelessWidget {
                 style: TextStyle(
                     color: onTap == null ? T.t3 : fg,
                     fontSize: small ? T.fontSm : T.fontBase,
-                    fontWeight: FontWeight.w600)),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2)),
           ),
         ),
       ),
@@ -1624,9 +2200,7 @@ class _SmallBtn extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   const _SmallBtn(
-      {required this.icon,
-      required this.label,
-      required this.onTap});
+      {required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext ctx) => Material(
@@ -1636,14 +2210,14 @@ class _SmallBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(T.r1),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 9, vertical: 5),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(T.r1),
                 border: Border.all(color: T.border)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, color: T.t2, size: 12),
-              const SizedBox(width: 4),
+              Icon(icon, color: T.t2, size: 13),
+              const SizedBox(width: 5),
               Text(label,
                   style: const TextStyle(
                       color: T.t2,
