@@ -6,7 +6,6 @@ import io
 from groq import Groq
 import json
 import sqlite3
-import os
 
 app = FastAPI()
 
@@ -89,7 +88,6 @@ async def extract_document(file: UploadFile = File(...)):
     try:
         file_bytes = await file.read()
         filename = file.filename.lower()
-
         if filename.endswith('.pdf'):
             import PyPDF2
             reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
@@ -98,7 +96,6 @@ async def extract_document(file: UploadFile = File(...)):
                 text += page.extract_text() + "\n"
         else:
             text = file_bytes.decode('utf-8', errors='ignore')
-
         return {
             "success": True,
             "extracted_text": text.strip(),
@@ -114,28 +111,22 @@ async def extract_spreadsheet(file: UploadFile = File(...)):
         import pandas as pd
         file_bytes = await file.read()
         filename = file.filename.lower()
-
         if filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(file_bytes))
         else:
             df = pd.read_excel(io.BytesIO(file_bytes))
 
-        # Clean column names
         df.columns = [c.lower().replace(' ', '_') for c in df.columns]
-
-        # Save all rows directly to database
         table_name = file.filename.split('.')[0].lower().replace(' ', '_')
         conn = get_db()
         cursor = conn.cursor()
 
-        # Create table
         col_defs = []
         for col in df.columns:
             dtype = 'INTEGER' if str(df[col].dtype) in ['int64', 'float64'] else 'TEXT'
             col_defs.append(f"{col} {dtype}")
         cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(col_defs)})")
 
-        # Insert all rows
         for _, row in df.iterrows():
             placeholders = ', '.join(['?' for _ in df.columns])
             values = tuple(str(v) for v in row.values)
@@ -158,7 +149,7 @@ async def extract_spreadsheet(file: UploadFile = File(...)):
     except Exception as e:
         return {"success": False, "error": str(e), "extracted_text": ""}
 
-# ── Schema generation via Groq ────────────────
+# ── Schema generation via Groq (with confidence + validation) ──
 @app.post("/schema/generate")
 async def generate_schema(data: dict):
     text = data.get("text", "")
@@ -166,6 +157,30 @@ async def generate_schema(data: dict):
         return {"success": False, "error": "No text provided"}
     try:
         client = Groq(api_key=GROQ_API_KEY)
+        prompt = (
+            "Analyze this extracted text and return a JSON schema for a database table.\n"
+            "Return ONLY a JSON object, nothing else. No explanation, no markdown, no backticks.\n"
+            "Format:\n"
+            "{\n"
+            '  "table_name": "snake_case_name",\n'
+            '  "fields": [\n'
+            '    {\n'
+            '      "name": "field_name",\n'
+            '      "type": "TEXT|INTEGER|REAL",\n'
+            '      "value": "extracted value or empty string",\n'
+            '      "confidence": 95,\n'
+            '      "valid": true,\n'
+            '      "reason": ""\n'
+            '    }\n'
+            '  ]\n'
+            '}\n\n'
+            'Rules:\n'
+            '- confidence: 0-100 based on how clearly the value was extracted\n'
+            '- valid: false if value seems wrong (marks > 100, negative age, empty required field)\n'
+            '- reason: explain why invalid, empty string if valid\n\n'
+            'Text to analyze:\n'
+            + text
+        )
         chat_completion = client.chat.completions.create(
             messages=[
                 {
@@ -174,18 +189,7 @@ async def generate_schema(data: dict):
                 },
                 {
                     "role": "user",
-                    "content": f"""Analyze this extracted text and return a JSON schema for a database table.
-Return ONLY a JSON object, nothing else.
-Format:
-{{
-  "table_name": "snake_case_name",
-  "fields": [
-    {{"name": "field_name", "type": "TEXT|INTEGER|REAL", "value": "extracted value or empty string"}}
-  ]
-}}
-
-Text to analyze:
-{text}"""
+                    "content": prompt
                 }
             ],
             model="llama-3.3-70b-versatile",
@@ -270,6 +274,14 @@ async def nl_to_sql(data: dict):
             schema_context += f"Table: {table}, Columns: {', '.join(columns)}\n"
 
         client = Groq(api_key=GROQ_API_KEY)
+        nl_prompt = (
+            "Convert this question to a SQLite SQL query.\n"
+            "Return only the SQL query, nothing else. No explanation, no backticks.\n\n"
+            "Database schema:\n"
+            + schema_context
+            + "\nQuestion: "
+            + question
+        )
         chat_completion = client.chat.completions.create(
             messages=[
                 {
@@ -278,12 +290,7 @@ async def nl_to_sql(data: dict):
                 },
                 {
                     "role": "user",
-                    "content": f"""Convert this question to a SQLite SQL query.
-
-Database schema:
-{schema_context}
-
-Question: {question}"""
+                    "content": nl_prompt
                 }
             ],
             model="llama-3.3-70b-versatile",

@@ -467,6 +467,33 @@ class _UploadScreenState extends State<UploadScreen> {
   String _extractedText = '';
   Map<String, dynamic>? _schema;
   bool _saved = false;
+  int _editingIndex = -1;
+  final Map<int, TextEditingController> _editControllers = {};
+
+  void _startEdit(int index, String currentValue) {
+    setState(() {
+      _editingIndex = index;
+      _editControllers[index] = TextEditingController(text: currentValue);
+    });
+  }
+
+  void _saveEdit(int index) {
+    if (_schema == null) return;
+    final newValue = _editControllers[index]?.text ?? '';
+    final fields = List<Map<String, dynamic>>.from(_schema!['fields']);
+    fields[index] = {
+      ...fields[index],
+      'value': newValue,
+      'confidence': 100,
+      'valid': true,
+      'reason': '',
+    };
+    setState(() {
+      _schema = {..._schema!, 'fields': fields};
+      _editingIndex = -1;
+      _editControllers.remove(index);
+    });
+  }
 
   Future<void> _processText(String text) async {
     setState(() {
@@ -949,42 +976,143 @@ class _UploadScreenState extends State<UploadScreen> {
                                   letterSpacing: 1))),
                     ]),
                   ),
-                  ...(_schema!['fields'] as List).map((field) {
+                  ...List.generate((_schema!['fields'] as List).length, (index) {
+                    final field = (_schema!['fields'] as List)[index];
+                    final isValid = field['valid'] ?? true;
+                    final confidence = field['confidence'] ?? 100;
+                    final reason = field['reason'] ?? '';
+                    final isLowConfidence = confidence < 70;
+                    final isEditing = _editingIndex == index;
+                    Color rowColor = Colors.transparent;
+                    if (!isValid) rowColor = T.dangerLight;
+                    else if (isLowConfidence) rowColor = T.warningLight;
                     return Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 11),
-                      decoration: const BoxDecoration(
-                          border:
-                              Border(top: BorderSide(color: T.border))),
-                      child: Row(children: [
-                        Expanded(
-                            child: Text(field['name'] ?? '',
-                                style: const TextStyle(
-                                    color: T.t1,
-                                    fontSize: T.fontBase,
-                                    fontWeight: FontWeight.w600))),
-                        Expanded(
-                            child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: T.accentLight,
-                              borderRadius:
-                                  BorderRadius.circular(T.r1)),
-                          child: Text(field['type'] ?? '',
-                              style: const TextStyle(
-                                  color: T.accent,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700)),
-                        )),
-                        Expanded(
-                            flex: 2,
-                            child: Text(
-                                field['value']?.toString() ?? '',
-                                style: const TextStyle(
-                                    color: T.t2,
-                                    fontSize: T.fontBase))),
-                      ]),
+                      decoration: BoxDecoration(
+                          color: rowColor,
+                          border: const Border(top: BorderSide(color: T.border))),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Expanded(
+                                child: Text(field['name'] ?? '',
+                                    style: const TextStyle(
+                                        color: T.t1,
+                                        fontSize: T.fontBase,
+                                        fontWeight: FontWeight.w600))),
+                            Expanded(
+                                child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                  color: T.accentLight,
+                                  borderRadius: BorderRadius.circular(T.r1)),
+                              child: Text(field['type'] ?? '',
+                                  style: const TextStyle(
+                                      color: T.accent,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700)),
+                            )),
+                            Expanded(
+                                flex: 2,
+                                child: Row(children: [
+                                  Expanded(
+                                    child: isEditing
+                                      ? TextField(
+                                          controller: _editControllers[index],
+                                          autofocus: true,
+                                          style: const TextStyle(
+                                              color: T.t1,
+                                              fontSize: T.fontBase),
+                                          decoration: InputDecoration(
+                                            isDense: true,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(T.r1),
+                                              borderSide: BorderSide(color: T.accent),
+                                            ),
+                                          ),
+                                          onSubmitted: (_) => _saveEdit(index),
+                                        )
+                                      : Text(
+                                          field['value']?.toString() ?? '',
+                                          style: TextStyle(
+                                              color: !isValid ? T.danger : T.t2,
+                                              fontSize: T.fontBase)),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  if (isEditing)
+                                    GestureDetector(
+                                      onTap: () => _saveEdit(index),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                            color: T.successLight,
+                                            borderRadius: BorderRadius.circular(T.r1)),
+                                        child: const Icon(Icons.check_rounded,
+                                            color: T.success, size: 14),
+                                      ),
+                                    )
+                                  else
+                                    GestureDetector(
+                                      onTap: () => _startEdit(index, field['value']?.toString() ?? ''),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                            color: !isValid ? T.dangerLight : T.bg,
+                                            borderRadius: BorderRadius.circular(T.r1),
+                                            border: Border.all(color: T.border)),
+                                        child: Icon(Icons.edit_rounded,
+                                            color: !isValid ? T.danger : T.t3,
+                                            size: 12),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    decoration: BoxDecoration(
+                                        color: !isValid ? T.dangerLight : isLowConfidence ? T.warningLight : T.successLight,
+                                        borderRadius: BorderRadius.circular(T.r1)),
+                                    child: Text('$confidence%',
+                                        style: TextStyle(
+                                            color: !isValid ? T.danger : isLowConfidence ? T.warning : T.success,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700)),
+                                  ),
+                                ])),
+                          ]),
+                          if (!isValid && reason.isNotEmpty && !isEditing)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Row(children: [
+                                const Icon(Icons.warning_amber_rounded,
+                                    color: T.danger, size: 12),
+                                const SizedBox(width: 4),
+                                Expanded(child: Text(reason,
+                                    style: const TextStyle(
+                                        color: T.danger,
+                                        fontSize: 10,
+                                        fontStyle: FontStyle.italic))),
+                              ]),
+                            ),
+                          if (isLowConfidence && isValid && !isEditing)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Row(children: [
+                                const Icon(Icons.info_outline_rounded,
+                                    color: T.warning, size: 12),
+                                const SizedBox(width: 4),
+                                const Text('Low confidence — please verify',
+                                    style: TextStyle(
+                                        color: T.warning,
+                                        fontSize: 10,
+                                        fontStyle: FontStyle.italic)),
+                              ]),
+                            ),
+                        ],
+                      ),
                     );
                   }),
                 ]),
