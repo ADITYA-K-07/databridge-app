@@ -1388,15 +1388,26 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                   )),
             if (_selectedTable != null && !_loading && _rows.isNotEmpty) ...[
               const SizedBox(height: 22),
-              _SectionLabel('$_selectedTable'),
+              Row(children: [
+                _SectionLabel('$_selectedTable'),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedTable = null;
+                    _rows = [];
+                    _columns = [];
+                  }),
+                  child: const Icon(Icons.close_rounded, color: T.t3, size: 18),
+                ),
+              ]),
               const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                    color: T.white,
-                    borderRadius: BorderRadius.circular(T.r2),
-                    border: Border.all(color: T.border)),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Container(
+                  decoration: BoxDecoration(
+                      color: T.white,
+                      borderRadius: BorderRadius.circular(T.r2),
+                      border: Border.all(color: T.border)),
                   child: DataTable(
                     headingRowColor: WidgetStateProperty.all(T.bg),
                     border: TableBorder.all(color: T.border, width: 1),
@@ -1662,13 +1673,13 @@ class _QueryScreenState extends State<QueryScreen> {
                 ),
               ]),
               const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                    color: T.white,
-                    borderRadius: BorderRadius.circular(T.r2),
-                    border: Border.all(color: T.border)),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Container(
+                  decoration: BoxDecoration(
+                      color: T.white,
+                      borderRadius: BorderRadius.circular(T.r2),
+                      border: Border.all(color: T.border)),
                   child: DataTable(
                     headingRowColor: WidgetStateProperty.all(T.bg),
                     border: TableBorder.all(color: T.border, width: 1),
