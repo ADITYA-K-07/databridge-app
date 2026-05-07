@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/gestures.dart';
 import 'api_service.dart';
 
 void main() {
@@ -118,6 +119,13 @@ class DataBridgeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+        },
+      ),
       title: 'DataBridge',
       debugShowCheckedModeBanner: false,
       theme: T.theme(),
@@ -136,14 +144,25 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _idx = 0;
+  int _dbRefreshKey = 0;
+  int _analyticsRefreshKey = 0;
   final DbState _db = DbState();
+
+  void _onTabTap(int i) {
+    setState(() {
+      if (i == 1) _dbRefreshKey++;
+      if (i == 3) _analyticsRefreshKey++;
+      _idx = i;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final screens = [
       UploadScreen(db: _db),
-      DatabaseScreen(db: _db),
+      DatabaseScreen(db: _db, key: ValueKey(_dbRefreshKey)),
       QueryScreen(db: _db),
+      AnalyticsScreen(key: ValueKey(_analyticsRefreshKey)),
       SettingsScreen(db: _db),
     ];
 
@@ -156,7 +175,7 @@ class _MainShellState extends State<MainShell> {
         child: KeyedSubtree(key: ValueKey(_idx), child: screens[_idx]),
       ),
       bottomNavigationBar:
-          _BottomBar(idx: _idx, onTap: (i) => setState(() => _idx = i)),
+          _BottomBar(idx: _idx, onTap: _onTabTap),
     );
   }
 }
@@ -402,6 +421,7 @@ class _BottomBar extends StatelessWidget {
     (icon: Icons.upload_file_rounded, label: 'Upload'),
     (icon: Icons.table_rows_rounded, label: 'Database'),
     (icon: Icons.manage_search_rounded, label: 'Query'),
+    (icon: Icons.analytics_outlined, label: 'Analytics'),
     (icon: Icons.settings_outlined, label: 'Settings'),
   ];
 
@@ -1744,6 +1764,286 @@ class _QueryScreenState extends State<QueryScreen> {
           ]),
     );
   }
+}
+
+
+// ─────────────────────────────────────────────
+// ANALYTICS SCREEN
+// ─────────────────────────────────────────────
+class AnalyticsScreen extends StatefulWidget {
+  AnalyticsScreen({super.key});
+
+  @override
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
+
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  Map<String, dynamic> _summary = {};
+  List<dynamic> _logs = [];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAnalytics();
+  }
+
+  Future<void> _loadAnalytics() async {
+    setState(() => _loading = true);
+    final summary = await ApiService.getAnalyticsSummary();
+    final logs = await ApiService.getAnalyticsLogs();
+    setState(() {
+      _loading = false;
+      if (summary['success'] == true) _summary = summary;
+      if (logs['success'] == true) _logs = logs['logs'] ?? [];
+    });
+  }
+
+  @override
+  Widget build(BuildContext ctx) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('Analytics',
+              style: TextStyle(
+                  color: T.t1,
+                  fontSize: T.font2xl,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6)),
+          const Spacer(),
+          _SmallBtn(icon: Icons.refresh_rounded, label: 'Refresh', onTap: _loadAnalytics),
+        ]),
+        const SizedBox(height: 3),
+        Text('Extraction metrics & system logs',
+            style: TextStyle(color: T.t2.withValues(alpha: 0.8), fontSize: T.fontBase)),
+        const SizedBox(height: 20),
+
+        if (_loading)
+          const Center(child: Padding(
+            padding: EdgeInsets.all(40),
+            child: CircularProgressIndicator(color: T.accent)))
+        else ...[
+          // ── Summary Cards ──
+          const _SectionLabel('Overview'),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: _AnalyticCard(
+              label: 'Total Extractions',
+              value: '${_summary['total_extractions'] ?? 0}',
+              icon: Icons.upload_rounded,
+              color: T.accent)),
+            const SizedBox(width: 10),
+            Expanded(child: _AnalyticCard(
+              label: 'Anomalies Caught',
+              value: '${_summary['anomalies_caught'] ?? 0}',
+              icon: Icons.warning_amber_rounded,
+              color: T.danger)),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: _AnalyticCard(
+              label: 'Avg Confidence',
+              value: '${_summary['avg_confidence'] ?? 0}%',
+              icon: Icons.verified_rounded,
+              color: T.success)),
+            const SizedBox(width: 10),
+            Expanded(child: _AnalyticCard(
+              label: 'Avg Process Time',
+              value: '${_summary['avg_processing_time'] ?? 0}s',
+              icon: Icons.timer_outlined,
+              color: T.warning)),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: _AnalyticCard(
+              label: 'Avg Accuracy',
+              value: '${_summary['avg_accuracy'] ?? 0}%',
+              icon: Icons.analytics_rounded,
+              color: const Color(0xFF7C3AED))),
+            const SizedBox(width: 10),
+            Expanded(child: _AnalyticCard(
+              label: 'Schema Generations',
+              value: '${(_logs.where((l) => l['event_type'] == 'schema_generation').length)}',
+              icon: Icons.schema_outlined,
+              color: const Color(0xFF0891B2))),
+          ]),
+
+          // ── By Source ──
+          if ((_summary['by_source'] as Map?)?.isNotEmpty == true) ...[
+            const SizedBox(height: 22),
+            const _SectionLabel('Extractions by Source'),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                  color: T.white,
+                  borderRadius: BorderRadius.circular(T.r2),
+                  border: Border.all(color: T.border)),
+              child: Column(
+                children: (_summary['by_source'] as Map).entries.map((e) {
+                  final total = (_summary['total_extractions'] as int?) ?? 1;
+                  final count = e.value as int;
+                  final pct = total > 0 ? count / total : 0.0;
+                  final colors = {
+                    'image': T.accent,
+                    'voice': const Color(0xFF7C3AED),
+                    'document': T.warning,
+                    'spreadsheet': T.success,
+                  };
+                  final color = colors[e.key] ?? T.t3;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Text(e.key.toString().toUpperCase(),
+                            style: TextStyle(color: color, fontSize: T.fontSm, fontWeight: FontWeight.w700)),
+                        const Spacer(),
+                        Text('$count extractions',
+                            style: const TextStyle(color: T.t2, fontSize: T.fontSm)),
+                      ]),
+                      const SizedBox(height: 4),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(T.r4),
+                        child: LinearProgressIndicator(
+                          value: pct.toDouble(),
+                          backgroundColor: T.border,
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                          minHeight: 6,
+                        ),
+                      ),
+                    ]),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+
+          // ── Anomaly Log ──
+          const SizedBox(height: 22),
+          const _SectionLabel('Anomaly Log'),
+          const SizedBox(height: 10),
+          ...(_logs.where((l) => l['event_type'] == 'anomaly').take(10).map((log) {
+            final details = log['details'] as Map;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 7),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: T.dangerLight,
+                  borderRadius: BorderRadius.circular(T.r2),
+                  border: Border.all(color: T.danger.withValues(alpha: 0.25))),
+              child: Row(children: [
+                const Icon(Icons.warning_amber_rounded, color: T.danger, size: 16),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${details['field']} = ${details['value']}',
+                      style: const TextStyle(color: T.danger, fontSize: T.fontBase, fontWeight: FontWeight.w600)),
+                  Text(details['reason']?.toString() ?? '',
+                      style: const TextStyle(color: T.t2, fontSize: T.fontSm)),
+                ])),
+                Text(log['timestamp']?.toString().substring(0, 16) ?? '',
+                    style: const TextStyle(color: T.t3, fontSize: 10)),
+              ]),
+            );
+          })).toList(),
+
+          if (_logs.where((l) => l['event_type'] == 'anomaly').isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              decoration: BoxDecoration(
+                  color: T.white,
+                  borderRadius: BorderRadius.circular(T.r2),
+                  border: Border.all(color: T.border)),
+              child: const Column(children: [
+                Icon(Icons.check_circle_outline_rounded, color: T.success, size: 28),
+                SizedBox(height: 8),
+                Text('No anomalies detected', style: TextStyle(color: T.t1, fontWeight: FontWeight.w600, fontSize: T.fontMd)),
+                Text('All extracted data passed validation', style: TextStyle(color: T.t3, fontSize: T.fontBase)),
+              ]),
+            ),
+
+          // ── Recent Activity ──
+          const SizedBox(height: 22),
+          const _SectionLabel('Recent Activity'),
+          const SizedBox(height: 10),
+          ..._logs.take(8).map((log) {
+            final type = log['event_type'] as String;
+            final details = log['details'] as Map;
+            final icons = {
+              'extraction': Icons.upload_rounded,
+              'schema_generation': Icons.schema_outlined,
+              'anomaly': Icons.warning_amber_rounded,
+              'save': Icons.save_rounded,
+            };
+            final colors = {
+              'extraction': T.accent,
+              'schema_generation': const Color(0xFF7C3AED),
+              'anomaly': T.danger,
+              'save': T.success,
+            };
+            final labels = {
+              'extraction': 'Extracted from ${details['source'] ?? 'unknown'}',
+              'schema_generation': 'Schema generated (${details['fields_count'] ?? 0} fields)',
+              'anomaly': 'Anomaly: ${details['field']} = ${details['value']}',
+              'save': 'Saved to ${details['table'] ?? 'table'} (${details['accuracy']}% accuracy)',
+            };
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                  color: T.white,
+                  borderRadius: BorderRadius.circular(T.r2),
+                  border: Border.all(color: T.border)),
+              child: Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                      color: (colors[type] ?? T.t3).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(T.r1)),
+                  child: Icon(icons[type] ?? Icons.info_outline_rounded,
+                      color: colors[type] ?? T.t3, size: 14)),
+                const SizedBox(width: 10),
+                Expanded(child: Text(labels[type] ?? type,
+                    style: const TextStyle(color: T.t1, fontSize: T.fontBase))),
+                Text(log['timestamp']?.toString().substring(0, 16) ?? '',
+                    style: const TextStyle(color: T.t3, fontSize: 10)),
+              ]),
+            );
+          }).toList(),
+        ],
+      ]),
+    );
+  }
+}
+
+class _AnalyticCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  const _AnalyticCard({required this.label, required this.value, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext ctx) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+        color: T.white,
+        borderRadius: BorderRadius.circular(T.r2),
+        border: Border.all(color: T.border),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.025), blurRadius: 6, offset: const Offset(0, 2))]),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(T.r1)),
+        child: Icon(icon, color: color, size: 15)),
+      const SizedBox(height: 10),
+      Text(value, style: const TextStyle(color: T.t1, fontSize: T.fontXl, fontWeight: FontWeight.w800)),
+      Text(label, style: const TextStyle(color: T.t3, fontSize: T.fontSm)),
+    ]),
+  );
 }
 
 // ─────────────────────────────────────────────

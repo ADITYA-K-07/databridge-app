@@ -6,6 +6,7 @@ import io
 from groq import Groq
 import json
 import sqlite3
+import time
 
 app = FastAPI()
 
@@ -29,7 +30,7 @@ def get_db():
 def get_all_tables():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '\\_%' AND name != 'sqlite_sequence'")
     tables = [row[0] for row in cursor.fetchall()]
     conn.close()
     return tables
@@ -43,6 +44,24 @@ def get_table_data(table_name):
     conn.close()
     return columns, rows
 
+def log_analytics(event_type, details):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS _analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT,
+            details TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute(
+        "INSERT INTO _analytics (event_type, details) VALUES (?, ?)",
+        (event_type, json.dumps(details))
+    )
+    conn.commit()
+    conn.close()
+
 # ── Health check ──────────────────────────────
 @app.get("/health")
 def health():
@@ -51,14 +70,23 @@ def health():
 # ── OCR: Extract text from image ──────────────
 @app.post("/extract/image")
 async def extract_image(file: UploadFile = File(...)):
+    start = time.time()
     try:
         image_bytes = await file.read()
         image = Image.open(io.BytesIO(image_bytes))
-        extracted_text = pytesseract.image_to_string(image).strip()
+        extracted_text = pytesseract.image_to_string(
+            image, config='--psm 6 --oem 3').strip()
+        elapsed = round(time.time() - start, 2)
+        log_analytics("extraction", {
+            "source": "image",
+            "processing_time": elapsed,
+            "text_length": len(extracted_text)
+        })
         return {
             "success": True,
             "extracted_text": extracted_text if extracted_text else "No text found in image",
             "source": "tesseract",
+            "processing_time": elapsed,
         }
     except Exception as e:
         return {"success": False, "error": str(e), "extracted_text": ""}
@@ -66,6 +94,7 @@ async def extract_image(file: UploadFile = File(...)):
 # ── Voice: Transcribe audio via Groq Whisper ──
 @app.post("/extract/voice")
 async def extract_voice(file: UploadFile = File(...)):
+    start = time.time()
     try:
         audio_bytes = await file.read()
         client = Groq(api_key=GROQ_API_KEY)
@@ -74,10 +103,17 @@ async def extract_voice(file: UploadFile = File(...)):
             model="whisper-large-v3",
             response_format="text"
         )
+        elapsed = round(time.time() - start, 2)
+        log_analytics("extraction", {
+            "source": "voice",
+            "processing_time": elapsed,
+            "text_length": len(transcription)
+        })
         return {
             "success": True,
             "extracted_text": transcription,
             "source": "groq_whisper",
+            "processing_time": elapsed,
         }
     except Exception as e:
         return {"success": False, "error": str(e), "extracted_text": ""}
@@ -85,6 +121,7 @@ async def extract_voice(file: UploadFile = File(...)):
 # ── Document: Extract text from PDF/TXT ───────
 @app.post("/extract/document")
 async def extract_document(file: UploadFile = File(...)):
+    start = time.time()
     try:
         file_bytes = await file.read()
         filename = file.filename.lower()
@@ -96,10 +133,17 @@ async def extract_document(file: UploadFile = File(...)):
                 text += page.extract_text() + "\n"
         else:
             text = file_bytes.decode('utf-8', errors='ignore')
+        elapsed = round(time.time() - start, 2)
+        log_analytics("extraction", {
+            "source": "document",
+            "processing_time": elapsed,
+            "text_length": len(text)
+        })
         return {
             "success": True,
             "extracted_text": text.strip(),
             "source": "document",
+            "processing_time": elapsed,
         }
     except Exception as e:
         return {"success": False, "error": str(e), "extracted_text": ""}
@@ -107,6 +151,7 @@ async def extract_document(file: UploadFile = File(...)):
 # ── Spreadsheet: Extract and save all rows ────
 @app.post("/extract/spreadsheet")
 async def extract_spreadsheet(file: UploadFile = File(...)):
+    start = time.time()
     try:
         import pandas as pd
         file_bytes = await file.read()
@@ -136,7 +181,12 @@ async def extract_spreadsheet(file: UploadFile = File(...)):
 
         conn.commit()
         conn.close()
-
+        elapsed = round(time.time() - start, 2)
+        log_analytics("extraction", {
+            "source": "spreadsheet",
+            "processing_time": elapsed,
+            "rows": len(df)
+        })
         text = df.to_string(index=False)
         return {
             "success": True,
@@ -145,13 +195,15 @@ async def extract_spreadsheet(file: UploadFile = File(...)):
             "table_name": table_name,
             "rows_saved": len(df),
             "already_saved": True,
+            "processing_time": elapsed,
         }
     except Exception as e:
         return {"success": False, "error": str(e), "extracted_text": ""}
 
-# ── Schema generation via Groq (with confidence + validation) ──
+# ── Schema generation via Groq ────────────────
 @app.post("/schema/generate")
 async def generate_schema(data: dict):
+    start = time.time()
     text = data.get("text", "")
     if not text:
         return {"success": False, "error": "No text provided"}
@@ -187,10 +239,7 @@ async def generate_schema(data: dict):
                     "role": "system",
                     "content": "You are a database schema generator. Always respond with valid JSON only. No explanation, no markdown, no backticks."
                 },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "user", "content": prompt}
             ],
             model="llama-3.3-70b-versatile",
             temperature=0.1,
@@ -198,7 +247,30 @@ async def generate_schema(data: dict):
         raw = chat_completion.choices[0].message.content.strip()
         raw = raw.replace("```json", "").replace("```", "").strip()
         schema = json.loads(raw)
-        return {"success": True, "schema": schema}
+        elapsed = round(time.time() - start, 2)
+
+        # Log anomalies
+        fields = schema.get("fields", [])
+        for field in fields:
+            if not field.get("valid", True):
+                log_analytics("anomaly", {
+                    "field": field.get("name"),
+                    "value": field.get("value"),
+                    "reason": field.get("reason")
+                })
+
+        # Calculate avg confidence
+        confidences = [f.get("confidence", 100) for f in fields]
+        avg_conf = round(sum(confidences) / len(confidences), 1) if confidences else 100
+
+        log_analytics("schema_generation", {
+            "processing_time": elapsed,
+            "fields_count": len(fields),
+            "avg_confidence": avg_conf,
+            "anomalies": sum(1 for f in fields if not f.get("valid", True))
+        })
+
+        return {"success": True, "schema": schema, "processing_time": elapsed}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -223,6 +295,16 @@ async def save_data(data: dict):
             values)
         conn.commit()
         conn.close()
+
+        # Log accuracy — fields that were valid without editing
+        valid_count = sum(1 for f in fields if f.get("valid", True))
+        log_analytics("save", {
+            "table": table_name,
+            "total_fields": len(fields),
+            "valid_fields": valid_count,
+            "accuracy": round(valid_count / len(fields) * 100, 1) if fields else 100
+        })
+
         return {"success": True, "table": table_name, "message": f"Data saved to {table_name}"}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -286,12 +368,9 @@ async def nl_to_sql(data: dict):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a SQL query generator. Return only the SQL query, nothing else. No explanation, no backticks."
+                    "content": "You are a SQL query generator. Return only the SQL query, nothing else."
                 },
-                {
-                    "role": "user",
-                    "content": nl_prompt
-                }
+                {"role": "user", "content": nl_prompt}
             ],
             model="llama-3.3-70b-versatile",
             temperature=0.1,
@@ -314,3 +393,90 @@ async def nl_to_sql(data: dict):
         }
     except Exception as e:
         return {"success": False, "error": str(e), "sql": ""}
+
+# ── Analytics Summary ─────────────────────────
+@app.get("/analytics/summary")
+def get_analytics_summary():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS _analytics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT,
+                details TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("SELECT event_type, details FROM _analytics")
+        rows = cursor.fetchall()
+        conn.close()
+
+        total_extractions = 0
+        by_source = {}
+        confidence_scores = []
+        anomalies = 0
+        processing_times = []
+        accuracy_scores = []
+
+        for event_type, details_str in rows:
+            details = json.loads(details_str)
+            if event_type == "extraction":
+                total_extractions += 1
+                source = details.get("source", "unknown")
+                by_source[source] = by_source.get(source, 0) + 1
+                if "processing_time" in details:
+                    processing_times.append(details["processing_time"])
+            elif event_type == "schema_generation":
+                if "avg_confidence" in details:
+                    confidence_scores.append(details["avg_confidence"])
+                if "processing_time" in details:
+                    processing_times.append(details["processing_time"])
+            elif event_type == "anomaly":
+                anomalies += 1
+            elif event_type == "save":
+                if "accuracy" in details:
+                    accuracy_scores.append(details["accuracy"])
+
+        return {
+            "success": True,
+            "total_extractions": total_extractions,
+            "by_source": by_source,
+            "avg_confidence": round(sum(confidence_scores) / len(confidence_scores), 1) if confidence_scores else 0,
+            "anomalies_caught": anomalies,
+            "avg_processing_time": round(sum(processing_times) / len(processing_times), 2) if processing_times else 0,
+            "avg_accuracy": round(sum(accuracy_scores) / len(accuracy_scores), 1) if accuracy_scores else 0,
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# ── Analytics Logs ────────────────────────────
+@app.get("/analytics/logs")
+def get_analytics_logs():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS _analytics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT,
+                details TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("SELECT * FROM _analytics ORDER BY timestamp DESC LIMIT 50")
+        rows = cursor.fetchall()
+        conn.close()
+        return {
+            "success": True,
+            "logs": [
+                {
+                    "id": r[0],
+                    "event_type": r[1],
+                    "details": json.loads(r[2]),
+                    "timestamp": r[3]
+                } for r in rows
+            ]
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}

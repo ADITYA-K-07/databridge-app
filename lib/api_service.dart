@@ -116,4 +116,23 @@ class ApiService {
       return {'success': false, 'error': e.toString()};
     }
   }
+  // ── Get analytics summary ──────────────────
+  static Future<Map<String, dynamic>> getAnalyticsSummary() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/analytics/summary'));
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // ── Get analytics logs ─────────────────────
+  static Future<Map<String, dynamic>> getAnalyticsLogs() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/analytics/logs'));
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
 }
