@@ -135,4 +135,19 @@ class ApiService {
       return {'success': false, 'error': e.toString()};
     }
   }
+  // ── Multimodal Fusion ──────────────────────
+  static Future<Map<String, dynamic>> fuseSchemas(
+    Map<String, dynamic> schema1,
+    Map<String, dynamic> schema2) async {
+  try {
+    final res = await http.post(
+      Uri.parse('$baseUrl/fusion/merge'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'schema1': schema1, 'schema2': schema2}),
+    );
+    return jsonDecode(res.body);
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+  }
 }

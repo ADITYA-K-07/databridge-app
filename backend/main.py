@@ -286,7 +286,15 @@ async def save_data(data: dict):
         conn = get_db()
         cursor = conn.cursor()
         col_defs = ", ".join([f"{f['name']} {f['type']}" for f in fields])
+        # Create table if not exists
         cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({col_defs})")
+
+        # Add any missing columns (for fusion with new fields)
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        existing_cols = [row[1] for row in cursor.fetchall()]
+        for f in fields:
+            if f['name'] not in existing_cols:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {f['name']} {f['type']}")
         col_names = ", ".join([f["name"] for f in fields])
         placeholders = ", ".join(["?" for _ in fields])
         values = tuple(f.get("value", "") for f in fields)
@@ -477,6 +485,90 @@ def get_analytics_logs():
                     "timestamp": r[3]
                 } for r in rows
             ]
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    
+    # ── Multimodal Fusion ─────────────────────────
+@app.post("/fusion/merge")
+async def fusion_merge(data: dict):
+    try:
+        schema1 = data.get("schema1", {})
+        schema2 = data.get("schema2", {})
+        
+        fields1 = {f["name"]: f for f in schema1.get("fields", [])}
+        fields2 = {f["name"]: f for f in schema2.get("fields", [])}
+        
+        merged_fields = []
+        all_keys = set(list(fields1.keys()) + list(fields2.keys()))
+        
+        for key in all_keys:
+            f1 = fields1.get(key)
+            f2 = fields2.get(key)
+            
+            if f1 and f2:
+                # Both sources have this field — compare values
+                val1 = str(f1.get("value", "")).strip().lower()
+                val2 = str(f2.get("value", "")).strip().lower()
+                conf1 = f1.get("confidence", 100)
+                conf2 = f2.get("confidence", 100)
+                
+                if val1 == val2:
+                    # Both agree — boost confidence
+                    merged_conf = min(100, int((conf1 + conf2) / 2) + 10)
+                    merged_fields.append({
+                        "name": key,
+                        "type": f1.get("type", "TEXT"),
+                        "value": f1.get("value", ""),
+                        "confidence": merged_conf,
+                        "valid": f1.get("valid", True) and f2.get("valid", True),
+                        "reason": f1.get("reason", ""),
+                        "fusion": "agreed",
+                        "sources": 2
+                    })
+                else:
+                    # Sources disagree — flag for user
+                    merged_fields.append({
+                        "name": key,
+                        "type": f1.get("type", "TEXT"),
+                        "value": f1.get("value", ""),
+                        "value2": f2.get("value", ""),
+                        "confidence": int((conf1 + conf2) / 2),
+                        "valid": True,
+                        "reason": "",
+                        "fusion": "conflict",
+                        "sources": 2
+                    })
+            elif f1:
+                # Only in source 1
+                merged_fields.append({**f1, "fusion": "single", "sources": 1})
+            elif f2:
+                # Only in source 2
+                merged_fields.append({**f2, "fusion": "single", "sources": 1})
+        
+        # Use table name from schema1
+        table_name = schema1.get("table_name", schema2.get("table_name", "fused_data"))
+        
+        # Log fusion event
+        agreed = sum(1 for f in merged_fields if f.get("fusion") == "agreed")
+        conflicts = sum(1 for f in merged_fields if f.get("fusion") == "conflict")
+        log_analytics("fusion", {
+            "table": table_name,
+            "total_fields": len(merged_fields),
+            "agreed_fields": agreed,
+            "conflict_fields": conflicts,
+            "fusion_score": round(agreed / len(merged_fields) * 100, 1) if merged_fields else 0
+        })
+        
+        return {
+            "success": True,
+            "schema": {
+                "table_name": table_name,
+                "fields": merged_fields
+            },
+            "fusion_score": round(agreed / len(merged_fields) * 100, 1) if merged_fields else 0,
+            "agreed": agreed,
+            "conflicts": conflicts
         }
     except Exception as e:
         return {"success": False, "error": str(e)}

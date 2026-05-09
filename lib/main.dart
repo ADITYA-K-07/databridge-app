@@ -486,7 +486,10 @@ class _UploadScreenState extends State<UploadScreen> {
   Uint8List? _imageBytes;
   String _extractedText = '';
   Map<String, dynamic>? _schema;
+  Map<String, dynamic>? _schema2;
+  Map<String, dynamic>? _fusionResult;
   bool _saved = false;
+  bool _fusionMode = false;
   int _editingIndex = -1;
   final Map<int, TextEditingController> _editControllers = {};
 
@@ -515,6 +518,49 @@ class _UploadScreenState extends State<UploadScreen> {
     });
   }
 
+  Future<void> _startFusion() async {
+    setState(() {
+      _fusionMode = true;
+      _status = 'Pick another source to fuse with…';
+    });
+  }
+
+  int _fusionCount = 1;
+
+  Future<void> _processFusion(String text) async {
+    if (_schema == null) return;
+    setState(() {
+      _loading = true;
+      _status = 'Generating schema for source ${_fusionCount + 1}…';
+    });
+    final schemaResult = await ApiService.generateSchema(text);
+    if (schemaResult['success'] != true) {
+      setState(() {
+        _loading = false;
+        _status = 'Schema error: ${schemaResult['error']}';
+        _fusionMode = false;
+      });
+      return;
+    }
+    setState(() => _status = 'Fusing data from all sources…');
+    // Always fuse with current schema (which may already be a fusion)
+    final fusionResult = await ApiService.fuseSchemas(
+        _schema!, schemaResult['schema']);
+    setState(() {
+      _loading = false;
+      _fusionMode = false;
+      if (fusionResult['success'] == true) {
+        _fusionCount++;
+        _schema2 = schemaResult['schema'];
+        _fusionResult = fusionResult;
+        _schema = fusionResult['schema'];
+        _status = 'Fusion complete! $_fusionCount sources merged · ${fusionResult['agreed']} agreed · ${fusionResult['conflicts']} conflicts';
+      } else {
+        _status = 'Fusion failed: ${fusionResult['error']}';
+      }
+    });
+  }
+
   Future<void> _processText(String text) async {
     setState(() {
       _extractedText = text;
@@ -539,22 +585,32 @@ class _UploadScreenState extends State<UploadScreen> {
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
     setState(() {
-      _imageBytes = bytes;
+      if (!_fusionMode) _imageBytes = bytes;
       _loading = true;
-      _status = 'Extracting text…';
-      _extractedText = '';
-      _schema = null;
-      _saved = false;
+      _status = _fusionMode ? 'Extracting text from source ${_fusionCount + 1}…' : 'Extracting text…';
+      if (!_fusionMode) {
+        _extractedText = '';
+        _schema = null;
+        _saved = false;
+        _fusionResult = null;
+        _schema2 = null;
+        _fusionCount = 1;
+      }
     });
     final ocrResult = await ApiService.extractFromImageBytes(bytes, picked.name);
     if (ocrResult['success'] != true) {
       setState(() {
         _loading = false;
         _status = 'OCR failed: ${ocrResult['error']}';
+        _fusionMode = false;
       });
       return;
     }
-    await _processText(ocrResult['extracted_text'] ?? '');
+    if (_fusionMode) {
+      await _processFusion(ocrResult['extracted_text'] ?? '');
+    } else {
+      await _processText(ocrResult['extracted_text'] ?? '');
+    }
   }
 
   Future<void> _recordVoice() async {
@@ -658,12 +714,38 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   Future<void> _saveToDatabase() async {
-    if (_schema == null) return;
+    print("SAVE TRIGGERED");
+    if (_schema == null) {
+      print("SCHEMA IS NULL");
+      return;
+    }
+    print("SCHEMA: ${_schema!['table_name']}");
+    print("FIELDS COUNT: ${(_schema!['fields'] as List).length}");
     setState(() {
       _loading = true;
       _status = 'Saving to database…';
     });
-    final result = await ApiService.saveData(_schema!);
+
+    // Clean schema — remove fusion fields before saving
+    final cleanFields = (_schema!['fields'] as List).map((f) {
+      return {
+        'name': f['name'],
+        'type': f['type'],
+        'value': f['value'] ?? '',
+        'confidence': f['confidence'] ?? 100,
+        'valid': f['valid'] ?? true,
+        'reason': f['reason'] ?? '',
+      };
+    }).toList();
+
+    final cleanSchema = {
+      'table_name': _schema!['table_name'],
+      'fields': cleanFields,
+    };
+
+    final result = await ApiService.saveData(cleanSchema);
+    print("SAVE RESULT: $result");
+
     setState(() {
       _loading = false;
       if (result['success'] == true) {
@@ -673,6 +755,7 @@ class _UploadScreenState extends State<UploadScreen> {
         _status = 'Save failed: ${result['error']}';
       }
     });
+
   }
 
   Future<ImageSource?> _showSourceDialog() async {
@@ -860,6 +943,38 @@ class _UploadScreenState extends State<UploadScreen> {
                 onTap: () => _showManualEntryDialog(ctx)),
             const SizedBox(height: 24),
 
+            // Fusion mode banner
+            if (_fusionMode && !_loading)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [Color(0xFF3B6FE8), Color(0xFF6B47DC)]),
+                    borderRadius: BorderRadius.circular(T.r2)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Row(children: [
+                    Icon(Icons.merge_rounded, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text('Fusion Mode Active',
+                        style: TextStyle(color: Colors.white, fontSize: T.fontMd, fontWeight: FontWeight.w700)),
+                  ]),
+                  const SizedBox(height: 6),
+                  const Text('Now pick a second source below. Data from both sources will be merged.',
+                      style: TextStyle(color: Colors.white70, fontSize: T.fontSm, height: 1.5)),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () => setState(() { _fusionMode = false; _status = ''; }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(T.r1)),
+                      child: const Text('Cancel Fusion', style: TextStyle(color: Colors.white, fontSize: T.fontSm, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ]),
+              ),
+
             // Loading
             if (_loading)
               Container(
@@ -886,7 +1001,7 @@ class _UploadScreenState extends State<UploadScreen> {
             // Image preview
             if (_imageBytes != null && !_loading) ...[
               const SizedBox(height: 18),
-              const _SectionLabel('Selected Image'),
+              _SectionLabel(_fusionResult != null ? 'Source 1 — Image' : 'Selected Image'),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(T.r2),
@@ -1003,9 +1118,14 @@ class _UploadScreenState extends State<UploadScreen> {
                     final reason = field['reason'] ?? '';
                     final isLowConfidence = confidence < 70;
                     final isEditing = _editingIndex == index;
+                    final fusionStatus = field['fusion'] ?? '';
+                    final hasConflict = fusionStatus == 'conflict';
+                    final value2 = field['value2']?.toString() ?? '';
                     Color rowColor = Colors.transparent;
-                    if (!isValid) rowColor = T.dangerLight;
+                    if (hasConflict) rowColor = T.warningLight;
+                    else if (!isValid) rowColor = T.dangerLight;
                     else if (isLowConfidence) rowColor = T.warningLight;
+                    else if (fusionStatus == 'agreed') rowColor = T.successLight;
                     return Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 11),
@@ -1117,7 +1237,7 @@ class _UploadScreenState extends State<UploadScreen> {
                                         fontStyle: FontStyle.italic))),
                               ]),
                             ),
-                          if (isLowConfidence && isValid && !isEditing)
+                          if (isLowConfidence && isValid && !isEditing && !hasConflict)
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Row(children: [
@@ -1129,6 +1249,64 @@ class _UploadScreenState extends State<UploadScreen> {
                                         color: T.warning,
                                         fontSize: 10,
                                         fontStyle: FontStyle.italic)),
+                              ]),
+                            ),
+                          if (hasConflict && value2.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                const Text('⚡ CONFLICT — Choose a value:',
+                                    style: TextStyle(color: T.warning, fontSize: 10, fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 4),
+                                Row(children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        final fields = List<Map<String, dynamic>>.from(_schema!['fields']);
+                                        fields[index] = {...fields[index], 'fusion': 'resolved', 'valid': true, 'confidence': 100};
+                                        setState(() => _schema = {..._schema!, 'fields': fields});
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                        decoration: BoxDecoration(
+                                            color: T.accentLight,
+                                            borderRadius: BorderRadius.circular(T.r1),
+                                            border: Border.all(color: T.accent.withValues(alpha: 0.4))),
+                                        child: Text('Source 1: ${field['value']}',
+                                            style: const TextStyle(color: T.accent, fontSize: 10, fontWeight: FontWeight.w600)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        final fields = List<Map<String, dynamic>>.from(_schema!['fields']);
+                                        fields[index] = {...fields[index], 'value': value2, 'fusion': 'resolved', 'valid': true, 'confidence': 100};
+                                        setState(() => _schema = {..._schema!, 'fields': fields});
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                        decoration: BoxDecoration(
+                                            color: const Color(0xFFF5F3FF),
+                                            borderRadius: BorderRadius.circular(T.r1),
+                                            border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.4))),
+                                        child: Text('Source 2: $value2',
+                                            style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 10, fontWeight: FontWeight.w600)),
+                                      ),
+                                    ),
+                                  ),
+                                ]),
+                              ]),
+                            ),
+                          if (fusionStatus == 'agreed')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Row(children: [
+                                const Icon(Icons.check_circle_rounded, color: T.success, size: 12),
+                                const SizedBox(width: 4),
+                                const Text('Both sources agree — confidence boosted',
+                                    style: TextStyle(color: T.success, fontSize: 10, fontStyle: FontStyle.italic)),
                               ]),
                             ),
                         ],
@@ -1157,9 +1335,39 @@ class _UploadScreenState extends State<UploadScreen> {
                                 fontWeight: FontWeight.w600)),
                       ]),
                     )
-                  : _Btn(
-                      label: 'Save to Database →',
-                      onTap: _saveToDatabase),
+                  : Column(children: [
+                      _Btn(label: 'Save to Database →', onTap: _saveToDatabase),
+                      const SizedBox(height: 8),
+                      _Btn(
+                        label: _fusionResult == null 
+                          ? '🔀 Fuse with Another Source'
+                          : '🔀 Add Source ${_fusionCount + 1}',
+                        onTap: _startFusion,
+                        outline: true,
+                      ),
+                    ]),
+
+              // Fusion score banner
+              if (_fusionResult != null && !_saved) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF3B6FE8), Color(0xFF6B47DC)]),
+                      borderRadius: BorderRadius.circular(T.r2)),
+                  child: Row(children: [
+                    const Icon(Icons.merge_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('Multimodal Fusion Complete',
+                          style: TextStyle(color: Colors.white, fontSize: T.fontMd, fontWeight: FontWeight.w700)),
+                      Text('$_fusionCount sources · Fusion Score: ${_fusionResult!['fusion_score']}% · ${_fusionResult!['agreed']} agreed · ${_fusionResult!['conflicts']} conflicts',
+                          style: const TextStyle(color: Colors.white70, fontSize: T.fontSm)),
+                    ])),
+                  ]),
+                ),
+              ],
             ],
 
             // Empty state
