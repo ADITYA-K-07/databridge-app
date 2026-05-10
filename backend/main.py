@@ -11,8 +11,11 @@ import time
 app = FastAPI()
 
 # ── Config ────────────────────────────────────
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-GROQ_API_KEY = ""  # paste your key here
+import platform
+if platform.system() == 'Windows':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+import os
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 DB_PATH = "databridge.db"
 
 # ── CORS ──────────────────────────────────────
